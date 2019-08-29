@@ -5,11 +5,11 @@ import 'package:moor_generator/src/utils/string_escaper.dart';
 import 'package:moor_generator/src/writer/data_class_writer.dart';
 import 'package:moor_generator/src/writer/update_companion_writer.dart';
 import 'package:moor_generator/src/writer/utils.dart';
+import 'package:recase/recase.dart';
 
 class TableWriter {
   final SpecifiedTable table;
   final GeneratorSession session;
-
   TableWriter(this.table, this.session);
 
   void writeInto(StringBuffer buffer) {
@@ -18,7 +18,9 @@ class TableWriter {
   }
 
   void writeDataClass(StringBuffer buffer) {
-    DataClassWriter(table, session).writeInto(buffer);
+    if (!table.fromEntity) {
+      DataClassWriter(table, session).writeInto(buffer);
+    }
     UpdateCompanionWriter(table, session).writeInto(buffer);
   }
 
@@ -58,6 +60,11 @@ class TableWriter {
     _writePrimaryKeyOverride(buffer);
 
     _writeMappingMethod(buffer);
+
+    if (table.fromEntity) {
+      _writeFromDataMethod(buffer);
+    }
+
     _writeReverseMappingMethod(buffer);
 
     _writeAliasGenerator(buffer);
@@ -86,8 +93,55 @@ class TableWriter {
       ..write(
           "final effectivePrefix = tablePrefix != null ? '\$tablePrefix.' : null;")
       ..write(
-          'return $dataClassName.fromData(data, _db, prefix: effectivePrefix);\n')
+          'return ${table.fromEntity ? "" : '$dataClassName.'}fromData(data, _db, prefix: effectivePrefix);\n')
       ..write('}\n');
+  }
+
+  void _writeFromDataMethod(StringBuffer buffer) {
+    final dataClassName = table.dartTypeName;
+
+    buffer
+      ..write('$dataClassName fromData')
+      ..write('(Map<String, dynamic> data, GeneratedDatabase db, ')
+      ..write('{String prefix}) {\n')
+      ..write("final effectivePrefix = prefix ?? '';");
+
+    final dartTypeToResolver = <String, String>{};
+
+    final types = table.columns.map((c) => c.variableTypeName).toSet();
+    for (var usedType in types) {
+      // final intType = db.typeSystem.forDartType<int>();
+      final resolver = '${ReCase(usedType).camelCase}Type';
+      dartTypeToResolver[usedType] = resolver;
+
+      buffer
+          .write('final $resolver = db.typeSystem.forDartType<$usedType>();\n');
+    }
+
+    // finally, the mighty constructor invocation:
+    buffer.write('$dataClassName model = $dataClassName();\n');
+
+    for (var column in table.columns) {
+      // id: intType.mapFromDatabaseResponse(data["id])
+      final getter = column.dartGetterName;
+      final resolver = dartTypeToResolver[column.variableTypeName];
+      final columnName = "'\${effectivePrefix}${column.name.name}'";
+
+      var loadType = '$resolver.mapFromDatabaseResponse(data[$columnName])';
+
+      // run the loaded expression though the custom converter for the final
+      // result.
+      if (column.typeConverter != null) {
+        // stored as a static field
+        final converter = column.typeConverter;
+        final loaded = '${table.tableInfoName}.${converter.fieldName}';
+        loadType = '$loaded.mapToDart($loadType)';
+      }
+
+      buffer.write('model.$getter = $loadType;');
+    }
+
+    buffer.write('return model;\n}\n');
   }
 
   void _writeReverseMappingMethod(StringBuffer buffer) {

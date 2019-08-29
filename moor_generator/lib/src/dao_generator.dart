@@ -5,6 +5,8 @@ import 'package:moor_generator/src/state/generator_state.dart';
 import 'package:moor_generator/src/state/options.dart';
 import 'package:moor_generator/src/writer/query_writer.dart';
 import 'package:moor_generator/src/writer/result_set_writer.dart';
+import 'package:moor_generator/src/writer/table_writer.dart';
+import 'package:moor_generator/src/writer/utils.dart';
 import 'package:source_gen/source_gen.dart';
 
 import 'model/sql_query.dart';
@@ -15,15 +17,12 @@ class DaoGenerator extends GeneratorForAnnotation<UseDao> {
   DaoGenerator(this.options);
 
   @override
-  generateForAnnotatedElement(
-      Element element, ConstantReader annotation, BuildStep buildStep) async {
+  generateForAnnotatedElement(Element element, ConstantReader annotation, BuildStep buildStep) async {
     final state = useState(() => GeneratorState(options));
     final session = state.startSession(buildStep);
 
     if (element is! ClassElement) {
-      throw InvalidGenerationSourceError(
-          'This annotation can only be used on classes',
-          element: element);
+      throw InvalidGenerationSourceError('This annotation can only be used on classes', element: element);
     }
 
     final targetClass = element as ClassElement;
@@ -31,9 +30,7 @@ class DaoGenerator extends GeneratorForAnnotation<UseDao> {
 
     final dbType = targetClass.supertype;
     if (dbType.name != 'DatabaseAccessor') {
-      throw InvalidGenerationSourceError(
-          'This class must directly inherit from DatabaseAccessor',
-          element: element);
+      throw InvalidGenerationSourceError('This class must directly inherit from DatabaseAccessor', element: element);
     }
 
     // inherits from DatabaseAccessor<T>, we want to know which T
@@ -50,14 +47,31 @@ class DaoGenerator extends GeneratorForAnnotation<UseDao> {
 
     final daoName = targetClass.displayName;
 
+
+
     buffer.write('mixin _\$${daoName}Mixin on '
         'DatabaseAccessor<${dbImpl.displayName}> {\n');
 
     for (var table in parsedDao.tables) {
       final infoType = table.tableInfoName;
       final getterName = table.tableFieldName;
-      buffer.write('$infoType get $getterName => db.$getterName;\n');
+      if (table.fromEntity) {
+        writeMemoizedGetter(
+          buffer: buffer,
+          getterName: getterName,
+          returnType: infoType,
+          code: '$infoType(db)',
+        );
+      } else {
+        buffer.write('$infoType get $getterName => db.$getterName;\n');
+      }
     }
+
+    final tableGetters = parsedDao.tables.map((t) => t.tableFieldName).toList();
+    buffer
+      ..write('List<TableInfo> get tables => [')
+      ..write(tableGetters.join(','))
+      ..write('];\n');
 
     final writtenMappingMethods = <String>{};
     for (var query in parsedDao.queries) {
@@ -72,6 +86,8 @@ class DaoGenerator extends GeneratorForAnnotation<UseDao> {
         ResultSetWriter(query).write(buffer);
       }
     }
+
+    parsedDao.tables.where((t) => t.fromEntity).forEach((t) => TableWriter(t, session).writeInto(buffer));
 
     return buffer.toString();
   }

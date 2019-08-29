@@ -60,6 +60,8 @@ class SpecifiedTable {
   /// `customConstraints` getter in the table class with this value.
   final List<String> overrideTableConstraints;
 
+  final bool fromEntity;
+
   const SpecifiedTable(
       {this.fromClass,
       this.columns,
@@ -69,7 +71,8 @@ class SpecifiedTable {
       String overriddenName,
       this.overrideWithoutRowId,
       this.overrideTableConstraints,
-      this.overrideDontWriteConstraints})
+      this.overrideDontWriteConstraints,
+      this.fromEntity = false})
       : _overriddenName = overriddenName;
 
   /// Finds all type converters used in this tables.

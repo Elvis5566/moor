@@ -8,6 +8,10 @@ class UpdateCompanionWriter {
   UpdateCompanionWriter(this.table, this.session);
 
   void writeInto(StringBuffer buffer) {
+    if (table.fromEntity) {
+      _writeCreateCompanion(buffer);
+    }
+
     buffer.write('class ${table.updateCompanionName} '
         'extends UpdateCompanion<${table.dartTypeName}> {\n');
     _writeFields(buffer);
@@ -53,5 +57,18 @@ class UpdateCompanionWriter {
       buffer.write('$name: $name ?? this.$name,');
     }
     buffer.write(');\n}\n');
+  }
+
+  void _writeCreateCompanion(StringBuffer buffer) {
+    final companionClass = table.updateCompanionName;
+    buffer.write('\n');
+    buffer.write('$companionClass _\$createCompanion(User instance, bool nullToAbsent) {');
+    buffer.write('return $companionClass(');
+    for (var column in table.columns) {
+      final getter = column.dartGetterName;
+      buffer.write('$getter: instance.$getter == null && nullToAbsent ? '
+          'const Value.absent() : Value(instance.$getter),');
+    }
+    buffer.write(');}');
   }
 }

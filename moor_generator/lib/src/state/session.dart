@@ -10,6 +10,7 @@ import 'package:moor_generator/src/model/specified_database.dart';
 import 'package:moor_generator/src/model/specified_table.dart';
 import 'package:moor_generator/src/model/sql_query.dart';
 import 'package:moor_generator/src/parser/column_parser.dart';
+import 'package:moor_generator/src/parser/entity_parser.dart';
 import 'package:moor_generator/src/parser/moor/moor_analyzer.dart';
 import 'package:moor_generator/src/parser/sql/sql_parser.dart';
 import 'package:moor_generator/src/parser/sql/type_mapping.dart';
@@ -32,12 +33,14 @@ class GeneratorSession {
 
   TableParser _tableParser;
   ColumnParser _columnParser;
+  EntityParser _entityParser;
 
   MoorOptions get options => state.options;
 
   GeneratorSession(this.state, this.step) {
     _tableParser = TableParser(this);
     _columnParser = ColumnParser(this);
+    _entityParser = EntityParser(this);
   }
 
   Future<ElementDeclarationResult> loadElementDeclaration(
@@ -108,6 +111,11 @@ class GeneratorSession {
     }
 
     return foundTables;
+  }
+
+  Future<SpecifiedTable> resolveEntity(DartType type) async {
+    final entityClass = type.element as ClassElement;
+    return _entityParser.parse(entityClass);
   }
 
   /// Parses a column from a getter [e] declared inside a table class and its

@@ -24,8 +24,11 @@ class UseDaoParser {
             ?.map((e) => e.toStringValue()) ??
         {};
 
+    final entityType = annotation.peek('entity')?.objectValue?.toTypeValue();
+
     final parsedTables = await session.parseTables(tableTypes, element);
     parsedTables.addAll(await session.resolveIncludes(includes));
+    parsedTables.add(await session.resolveEntity(entityType));
 
     final parsedQueries =
         await session.parseQueries(queryStrings, parsedTables);

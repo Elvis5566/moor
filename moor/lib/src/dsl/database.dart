@@ -96,8 +96,11 @@ class UseDao {
   @experimental
   final Set<String> include;
 
+  final Type entity;
+
   const UseDao(
       {@required this.tables,
+      this.entity,
       this.queries = const {},
       @experimental this.include = const {}});
 }

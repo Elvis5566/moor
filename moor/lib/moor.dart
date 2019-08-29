@@ -10,6 +10,7 @@ export 'package:meta/meta.dart' show required;
 export 'package:moor/src/dsl/table.dart';
 export 'package:moor/src/dsl/columns.dart';
 export 'package:moor/src/dsl/database.dart';
+export 'package:moor/src/dsl/entity.dart';
 
 export 'package:moor/src/runtime/components/join.dart'
     show innerJoin, leftOuterJoin, crossJoin;
