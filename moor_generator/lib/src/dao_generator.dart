@@ -62,6 +62,8 @@ class DaoGenerator extends GeneratorForAnnotation<UseDao> {
           returnType: infoType,
           code: '$infoType(db)',
         );
+
+        buffer.write('Future<int> upsert(${table.dartTypeName} instance) => into($getterName).insert(instance, orReplace: true);\n');
       } else {
         buffer.write('$infoType get $getterName => db.$getterName;\n');
       }
@@ -77,6 +79,8 @@ class DaoGenerator extends GeneratorForAnnotation<UseDao> {
     for (var query in parsedDao.queries) {
       QueryWriter(query, session, writtenMappingMethods).writeInto(buffer);
     }
+
+
 
     buffer.write('}');
 
