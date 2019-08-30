@@ -1,3 +1,5 @@
+import 'package:moor/moor.dart';
+
 class Entity {
   const Entity();
 }
@@ -27,7 +29,9 @@ class EntityColumn implements EntityColumnBase {
 
   final int length;
 
-  const EntityColumn({this.name, this.isNullable = false, this.uniqueGroup, this.auto = false, this.length});
+  final Type converter;
+
+  const EntityColumn({this.name, this.isNullable = false, this.uniqueGroup, this.auto = false, this.length, this.converter});
 }
 
 /// Annotation to declare a model property as primary key in database table

@@ -6,6 +6,7 @@ import 'package:moor/moor.dart';
 import 'package:moor/sqlite_keywords.dart';
 import 'package:moor_generator/src/model/specified_column.dart';
 import 'package:moor_generator/src/model/specified_table.dart';
+import 'package:moor_generator/src/model/used_type_converter.dart';
 import 'package:moor_generator/src/state/errors.dart';
 import 'package:moor_generator/src/state/session.dart';
 import 'package:moor_generator/src/utils/names.dart';
@@ -29,22 +30,7 @@ class EntityParser {
 
     final primaryKey = columns.where((c) => c.features.contains(const PrimaryKey())).toSet();
 
-//    final table = SpecifiedTable(
-//      fromClass: element,
-//      columns: columns,
-//      sqlName: escapeIfNeeded(sqlName),
-//      dartTypeName: _readDartTypeName(element),
-//      primaryKey: await _readPrimaryKey(element, columns),
-//    );
-
-//    var index = 0;
-//    for (var converter in table.converters) {
-//      converter
-//        ..index = index++
-//        ..table = table;
-//    }
-
-    return SpecifiedTable(
+    final table = SpecifiedTable(
       fromClass: null,
       columns: columns,
       sqlName: escapeIfNeeded(tableName),
@@ -57,6 +43,15 @@ class EntityParser {
       // we take care of writing the primary key ourselves
 //      overrideDontWriteConstraints: true,
     );
+
+    var index = 0;
+    for (var converter in table.converters) {
+      converter
+        ..index = index++
+        ..table = table;
+    }
+
+    return table;
   }
 
   String _parseTableName(ClassElement element) {
@@ -89,7 +84,6 @@ class EntityParser {
       final column = _fieldToSpecifiedColumn(field as FieldElement);
       if (column != null) {
         columns[field.name] = column;
-        print('gg ${field.name}');
       }
     }
 
@@ -118,6 +112,22 @@ class EntityParser {
     final columnName = obj.getField('name').toStringValue();
     final isNullable = obj.getField('isNullable').toBoolValue();
     final autoIncrement = obj.getField('auto').toBoolValue();
+    final converterType = obj.getField('converter')?.toTypeValue();
+
+    UsedTypeConverter typeConverter;
+
+    if (converterType != null) {
+      final typeArguments = (converterType.element as ClassElement).supertype.typeArguments;
+      final mappedType = typeArguments.first;
+      final sqlType = typeArguments.last;
+
+      typeConverter = UsedTypeConverter(
+        converterType: converterType,
+        mappedType: mappedType,
+        sqlType: _typeToColumnType(sqlType),
+      );
+    }
+
 //    final unique = obj.getField('uniqueGroup').toStringValue();
 //    final length = obj.getField('length').toIntValue();
 
@@ -134,7 +144,7 @@ class EntityParser {
     }
 
     return SpecifiedColumn(
-      type: _typeToColumnType(f.type),
+      type: typeConverter != null ? typeConverter.sqlType : _typeToColumnType(f.type),
       dartGetterName: f.name,
       name: columnName != null ? ColumnName.explicitly(columnName) : ColumnName.implicitly(ReCase(f.name).snakeCase),
 //        overriddenJsonName: _readJsonKey(getterElement),
@@ -142,7 +152,7 @@ class EntityParser {
       nullable: isNullable,
       features: foundFeatures,
 //        defaultArgument: foundDefaultExpression?.toSource(),
-//        typeConverter: converter
+      typeConverter: typeConverter,
     );
   }
 
