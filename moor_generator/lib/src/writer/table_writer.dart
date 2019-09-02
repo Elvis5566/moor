@@ -63,6 +63,7 @@ class TableWriter {
 
     if (table.fromEntity) {
       _writeFromDataMethod(buffer);
+      _writeBuildJoinInfo(buffer);
     }
 
     _writeReverseMappingMethod(buffer);
@@ -74,6 +75,25 @@ class TableWriter {
 
     // close class
     buffer.write('}');
+  }
+
+  void _writeBuildJoinInfo(StringBuffer buffer) {
+
+    buffer.write('@override\n');
+    buffer.write('Map<GeneratedColumn, TableInfo> buildJoinInfo() {\n');
+    buffer.write('return {\n');
+    buffer.write(table.columns
+        .where((c) => c.isToOne())
+        .map((c) {
+          final f = c.features.firstWhere((f) => f is ToOne);
+          final referencedTable = (f as ToOne).referencedTable;
+          final name = c.name.name;
+          return "$name: ${referencedTable.tableInfoName}(_db, '\${\$tableName}_$name'),";
+        })
+        .join());
+
+    buffer.write('};\n');
+    buffer.write('}\n');
   }
 
   void _writeConvertersAsStaticFields(StringBuffer buffer) {
@@ -104,6 +124,7 @@ class TableWriter {
       ..write('$dataClassName fromData')
       ..write('(Map<String, dynamic> data, GeneratedDatabase db, ')
       ..write('{String prefix}) {\n')
+      ..write('final joinInfo = buildJoinInfo();\n')
       ..write("final effectivePrefix = prefix ?? '';");
 
     final dartTypeToResolver = <String, String>{};
@@ -136,6 +157,8 @@ class TableWriter {
         final converter = column.typeConverter;
         final loaded = '${table.tableInfoName}.${converter.fieldName}';
         loadType = '$loaded.mapToDart($loadType)';
+      } else if (column.features.any((f) => f is ToOne)) {
+        loadType = 'joinInfo[$getter].map(data, tablePrefix: joinInfo[$getter].\$tableName)';
       }
 
       buffer.write('model.$getter = $loadType;');

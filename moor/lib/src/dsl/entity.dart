@@ -52,7 +52,8 @@ class EntityPrimaryKey implements EntityColumnBase {
 
 abstract class ForeignBase implements EntityColumnBase {}
 
-class ToOne implements ForeignBase {
+class EntityToOne implements ForeignBase {
+  final Type dao;
   /// Name of the column in database
   final String name;
 
@@ -67,7 +68,7 @@ class ToOne implements ForeignBase {
   /// The field/column in the foreign bean
   final String refCol;
 
-  const ToOne({
+  const EntityToOne(this.dao, {
     this.name,
     this.isNullable = false,
     this.uniqueGroup,

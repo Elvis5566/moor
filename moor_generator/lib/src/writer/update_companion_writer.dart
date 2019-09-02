@@ -1,3 +1,4 @@
+import 'package:moor_generator/src/model/specified_column.dart';
 import 'package:moor_generator/src/model/specified_table.dart';
 import 'package:moor_generator/src/state/session.dart';
 
@@ -62,12 +63,19 @@ class UpdateCompanionWriter {
   void _writeCreateCompanion(StringBuffer buffer) {
     final companionClass = table.updateCompanionName;
     buffer.write('\n');
-    buffer.write('$companionClass _\$createCompanion(User instance, bool nullToAbsent) {');
+    buffer.write('$companionClass _\$createCompanion(${table.dartTypeName} instance, bool nullToAbsent) {');
     buffer.write('return $companionClass(');
     for (var column in table.columns) {
       final getter = column.dartGetterName;
+      String pKey = "";
+      if (column.isToOne()) {
+        final f = column.features.firstWhere((f) => f is ToOne);
+        final referencedColumn = (f as ToOne).referencedColumn;
+        pKey = '.${referencedColumn.name.name}';
+      }
+
       buffer.write('$getter: instance.$getter == null && nullToAbsent ? '
-          'const Value.absent() : Value(instance.$getter),');
+          'const Value.absent() : Value(instance.$getter$pKey),');
     }
     buffer.write(');}');
   }

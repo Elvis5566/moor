@@ -5,6 +5,7 @@ import 'package:analyzer/src/dart/resolver/inheritance_manager.dart' show Inheri
 import 'package:moor/moor.dart';
 import 'package:moor/sqlite_keywords.dart';
 import 'package:moor_generator/src/model/specified_column.dart';
+import 'package:moor_generator/src/model/specified_dao.dart';
 import 'package:moor_generator/src/model/specified_table.dart';
 import 'package:moor_generator/src/model/used_type_converter.dart';
 import 'package:moor_generator/src/state/errors.dart';
@@ -19,6 +20,8 @@ class EntityParser {
   final GeneratorSession session;
   final isEntityColumnBase = const TypeChecker.fromRuntime(EntityColumnBase);
   final isPrimaryKey = const TypeChecker.fromRuntime(EntityPrimaryKey);
+  final isToOne = const TypeChecker.fromRuntime(EntityToOne);
+  final isUseDao = const TypeChecker.fromRuntime(UseDao);
 
   /// If [element] has a `@UseDao` annotation, parses the database model
   /// declared by that class and the referenced tables.
@@ -81,7 +84,7 @@ class EntityParser {
 
       if (field.isStatic) continue;
 
-      final column = _fieldToSpecifiedColumn(field as FieldElement);
+      final column = await _fieldToSpecifiedColumn(field as FieldElement);
       if (column != null) {
         columns[field.name] = column;
       }
@@ -90,12 +93,11 @@ class EntityParser {
     return columns.values.toList();
   }
 
-  SpecifiedColumn _fieldToSpecifiedColumn(FieldElement field) {
-    final columns = field.metadata
+  Future<SpecifiedColumn> _fieldToSpecifiedColumn(FieldElement field) async {
+    final columns = await Future.wait(field.metadata
         .map((ElementAnnotation annot) => annot.computeConstantValue())
         .where((DartObject i) => isEntityColumnBase.isAssignableFromType(i.type))
-        .map((DartObject i) => _makeSpecifiedColumn(field, i))
-        .toList();
+        .map((DartObject i) => _makeSpecifiedColumn(field, i)));
 
     if (columns.length > 1) {
       session.errors.add(MoorError(affectedElement: field, message: 'Only one EntityColumn annotation is allowed on a Field!'));
@@ -108,7 +110,7 @@ class EntityParser {
     return columns.first;
   }
 
-  SpecifiedColumn _makeSpecifiedColumn(FieldElement f, DartObject obj) {
+  Future<SpecifiedColumn> _makeSpecifiedColumn(FieldElement f, DartObject obj) async {
     final columnName = obj.getField('name').toStringValue();
     final isNullable = obj.getField('isNullable').toBoolValue();
     final autoIncrement = obj.getField('auto').toBoolValue();
@@ -133,8 +135,24 @@ class EntityParser {
 
     final foundFeatures = <ColumnFeature>[];
 
+    SpecifiedColumn referencedColumn;
+
     if (isPrimaryKey.isExactlyType(obj.type)) {
       foundFeatures.add(const PrimaryKey());
+    } else if (isToOne.isExactlyType(obj.type)) {
+      final referencedDao = obj.getField('dao')?.toTypeValue().element as ClassElement;
+
+      final ElementAnnotation meta = referencedDao.metadata.firstWhere(
+              (m) => isUseDao.isExactlyType(m.computeConstantValue().type),
+          orElse: () => null);
+      if (meta == null)
+        throw Exception("Cannot find or parse `UseDao` annotation!");
+
+      SpecifiedDao parsedDao = await session.parseDao(referencedDao, ConstantReader(meta.computeConstantValue()));
+      final referencedTable = parsedDao.tables.first;
+      referencedColumn = parsedDao.tables.first.primaryKey.first;
+
+      foundFeatures.add(ToOne(referencedTable, referencedColumn));
     }
 
     if (autoIncrement) {
@@ -143,8 +161,18 @@ class EntityParser {
       foundFeatures.add(const PrimaryKey());
     }
 
+    ColumnType type;
+
+    if (typeConverter != null) {
+      type = typeConverter.sqlType;
+    } else if (referencedColumn != null) {
+      type = referencedColumn.type;
+    } else {
+      type = _typeToColumnType(f.type);
+    }
+
     return SpecifiedColumn(
-      type: typeConverter != null ? typeConverter.sqlType : _typeToColumnType(f.type),
+      type: type,
       dartGetterName: f.name,
       name: columnName != null ? ColumnName.explicitly(columnName) : ColumnName.implicitly(ReCase(f.name).snakeCase),
 //        overriddenJsonName: _readJsonKey(getterElement),

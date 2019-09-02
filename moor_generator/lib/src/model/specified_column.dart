@@ -1,4 +1,5 @@
 import 'package:built_value/built_value.dart';
+import 'package:moor_generator/src/model/specified_table.dart';
 import 'package:moor_generator/src/model/used_type_converter.dart';
 
 part 'specified_column.g.dart';
@@ -147,6 +148,8 @@ class SpecifiedColumn {
   /// this column.
   String get sqlTypeName => sqlTypes[type];
 
+  bool isToOne() => features.any((f) => f is ToOne);
+
   const SpecifiedColumn({
     this.type,
     this.dartGetterName,
@@ -206,4 +209,11 @@ class Reference extends ColumnFeature {
   final SpecifiedColumn referencedColumn;
 
   const Reference(this.referencedColumn);
+}
+
+class ToOne extends ColumnFeature {
+  final SpecifiedTable referencedTable;
+  final SpecifiedColumn referencedColumn;
+
+  const ToOne(this.referencedTable, this.referencedColumn);
 }

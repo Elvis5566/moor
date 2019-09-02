@@ -1,4 +1,5 @@
 import 'package:moor/moor.dart';
+import 'package:moor/src/runtime/components/join.dart';
 import 'package:moor/src/runtime/expressions/variables.dart';
 
 /// Base class for generated classes. [TableDsl] is the type specified by the
@@ -58,6 +59,22 @@ mixin TableInfo<TableDsl extends Table, D extends DataClass> on Table {
   D map(Map<String, dynamic> data, {String tablePrefix});
 
   TableInfo<TableDsl, D> createAlias(String alias);
+
+  List<Join> getJoins() {
+    List<Join> joins = [];
+    final joinInfo = buildJoinInfo();
+
+    joins.addAll(joinInfo.keys.map((column) {
+      final table = joinInfo[column];
+      return leftOuterJoin(table, column.equalsExp(table.primaryKey.first));
+    }));
+
+    joins.addAll(joinInfo.values.expand((table) => table.getJoins()));
+
+    return joins;
+  }
+
+  Map<GeneratedColumn, TableInfo> buildJoinInfo() => {};
 
   @override
   bool operator ==(other) {

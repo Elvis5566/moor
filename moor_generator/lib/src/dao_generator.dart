@@ -1,6 +1,7 @@
 import 'package:analyzer/dart/element/element.dart';
 import 'package:build/build.dart';
 import 'package:moor/moor.dart';
+import 'package:moor_generator/src/model/specified_column.dart';
 import 'package:moor_generator/src/model/specified_table.dart';
 import 'package:moor_generator/src/state/generator_state.dart';
 import 'package:moor_generator/src/state/options.dart';
@@ -47,8 +48,6 @@ class DaoGenerator extends GeneratorForAnnotation<UseDao> {
     final buffer = StringBuffer();
 
     final daoName = targetClass.displayName;
-
-
 
     buffer.write('mixin _\$${daoName}Mixin on '
         'DatabaseAccessor<${dbImpl.displayName}> {\n');
@@ -99,7 +98,18 @@ class DaoGenerator extends GeneratorForAnnotation<UseDao> {
   }
 
   void _writeUpsert(SpecifiedTable table, StringBuffer buffer) {
-    buffer.write('Future<int> upsert(${table.dartTypeName} instance) => into(${table.tableFieldName}).insert(instance, orReplace: true);\n');
+    buffer.write('Future upsert(${table.dartTypeName} instance) {\n');
+    final toOneColumns = table.columns.where((c) => c.features.any((f) => f is ToOne));
+
+    buffer.write('return transaction((_) async {\n');
+    for (final column in toOneColumns) {
+      buffer.write('await instance.${column.dartGetterName}?.save();\n');
+    }
+
+    buffer.write('await into(${table.tableFieldName}).insert(instance, orReplace: true);\n');
+
+    buffer.write('});\n');
+    buffer.write('}\n');
   }
 
   void _writeLoadAll(SpecifiedTable table, StringBuffer buffer) {
@@ -121,7 +131,13 @@ class DaoGenerator extends GeneratorForAnnotation<UseDao> {
     buffer.write('statement.orderBy(orderBy);\n');
     buffer.write('}\n');
 
-    buffer.write('return statement.get();\n');
+    buffer.write('final joins = ${table.tableFieldName}.getJoins();\n');
+
+    buffer.write('return joins.length == 0\n');
+    buffer.write('? statement.get()\n');
+    buffer.write(': statement.join(joins).get().then((rows) {\n');
+    buffer.write('return rows.map((row) => row.readTable(${table.tableFieldName})).toList();\n');
+    buffer.write('});\n');
     buffer.write('}\n');
   }
 
