@@ -1,6 +1,7 @@
 import 'package:analyzer/dart/element/element.dart';
 import 'package:build/build.dart';
 import 'package:moor/moor.dart';
+import 'package:moor_generator/src/model/specified_table.dart';
 import 'package:moor_generator/src/state/generator_state.dart';
 import 'package:moor_generator/src/state/options.dart';
 import 'package:moor_generator/src/writer/query_writer.dart';
@@ -63,7 +64,10 @@ class DaoGenerator extends GeneratorForAnnotation<UseDao> {
           code: '$infoType(db)',
         );
 
-        buffer.write('Future<int> upsert(${table.dartTypeName} instance) => into($getterName).insert(instance, orReplace: true);\n');
+        _writeUpsert(table, buffer);
+        _writeLoadAll(table, buffer);
+        _writeLoad(table, buffer);
+
       } else {
         buffer.write('$infoType get $getterName => db.$getterName;\n');
       }
@@ -80,8 +84,6 @@ class DaoGenerator extends GeneratorForAnnotation<UseDao> {
       QueryWriter(query, session, writtenMappingMethods).writeInto(buffer);
     }
 
-
-
     buffer.write('}');
 
     // if the queries introduced additional classes, also write those
@@ -95,4 +97,40 @@ class DaoGenerator extends GeneratorForAnnotation<UseDao> {
 
     return buffer.toString();
   }
+
+  void _writeUpsert(SpecifiedTable table, StringBuffer buffer) {
+    buffer.write('Future<int> upsert(${table.dartTypeName} instance) => into(${table.tableFieldName}).insert(instance, orReplace: true);\n');
+  }
+
+  void _writeLoadAll(SpecifiedTable table, StringBuffer buffer) {
+    final tableClassName = table.tableInfoName;
+
+    buffer.write('Future<List<${table.dartTypeName}>> loadAll({Expression<bool, BoolType> where($tableClassName table), '
+        'int limit, int offset, List<OrderClauseGenerator<$tableClassName>> orderBy}) {\n');
+
+    buffer.write('final statement = select(${table.tableFieldName});\n');
+    buffer.write('if (where != null) {\n');
+    buffer.write('statement.where(where);\n');
+    buffer.write('}\n');
+
+    buffer.write('if (limit != null) {\n');
+    buffer.write('statement.limit(limit, offset: offset);\n');
+    buffer.write('}\n');
+
+    buffer.write('if (orderBy != null) {\n');
+    buffer.write('statement.orderBy(orderBy);\n');
+    buffer.write('}\n');
+
+    buffer.write('return statement.get();\n');
+    buffer.write('}\n');
+  }
+
+  void _writeLoad(SpecifiedTable table, StringBuffer buffer) {
+    buffer.write('Future<${table.dartTypeName}> load(key) async {\n');
+    buffer.write('final list = await (select(${table.tableFieldName})..where((table) => table.primaryKey.first.equals(key))).get();\n');
+    buffer.write('return list.length > 0 ? list.first : null;\n');
+    buffer.write('}\n');
+
+  }
+
 }
