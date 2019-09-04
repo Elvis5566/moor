@@ -217,7 +217,8 @@ class TableWriter {
         if (feature.maxLength != null) {
           additionalParams['maxTextLength'] = feature.maxLength.toString();
         }
-      } else if (feature is PrimaryKey && column.type == ColumnType.integer) {
+//      } else if (feature is PrimaryKey && column.type == ColumnType.integer) {
+      } else if (feature is PrimaryKey) {
         // this field is only relevant for integer columns because an INTEGER
         // PRIMARY KEY is an alias for the rowid which should allow absent
         // values during insert, even without the `AUTOINCREMENT` clause.

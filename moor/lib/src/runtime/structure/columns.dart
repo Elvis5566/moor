@@ -112,17 +112,26 @@ class GeneratedTextColumn extends GeneratedColumn<String, StringType>
     implements TextColumn {
   final int minTextLength;
   final int maxTextLength;
+  final bool declaredAsPrimaryKey;
 
   GeneratedTextColumn(
     String name,
     String tableName,
     bool nullable, {
+    this.declaredAsPrimaryKey = false,
     this.minTextLength,
     this.maxTextLength,
     String $customConstraints,
     Expression<String, StringType> defaultValue,
   }) : super(name, tableName, nullable,
             $customConstraints: $customConstraints, defaultValue: defaultValue);
+
+  @override
+  void writeCustomConstraints(StringBuffer into) {
+    if (declaredAsPrimaryKey) {
+      into.write(' PRIMARY KEY');
+    }
+  }
 
   @override
   Expression<bool, BoolType> like(String pattern) =>

@@ -44,7 +44,7 @@ class EntityParser {
 //      overrideWithoutRowId: table.withoutRowId ? true : null,
 //      overrideTableConstraints: constraints.isNotEmpty ? constraints : null,
       // we take care of writing the primary key ourselves
-//      overrideDontWriteConstraints: true,
+      overrideDontWriteConstraints: true,
     );
 
     var index = 0;
