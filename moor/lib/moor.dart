@@ -13,11 +13,12 @@ export 'package:moor/src/dsl/database.dart';
 export 'package:moor/src/dsl/entity.dart';
 
 export 'package:moor/src/runtime/components/join.dart'
-    show innerJoin, leftOuterJoin, crossJoin;
+    show innerJoin, leftOuterJoin, crossJoin, Join;
 export 'package:moor/src/runtime/components/order_by.dart';
 export 'package:moor/src/runtime/executor/executor.dart';
 export 'package:moor/src/types/type_system.dart';
 export 'package:moor/src/runtime/expressions/comparable.dart';
+export 'package:moor/src/runtime/expressions/expression.dart';
 export 'package:moor/src/runtime/expressions/user_api.dart';
 export 'package:moor/src/runtime/executor/transactions.dart';
 export 'package:moor/src/runtime/statements/query.dart';
