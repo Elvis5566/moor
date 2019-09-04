@@ -45,7 +45,7 @@ class TableWriter {
 
     // Generate $columns, $tableName, asDslTable getters
     final columnsWithGetters =
-        table.columns.map((c) => c.dartGetterName).join(', ');
+        table.columns.map((c) => '${c.dartGetterName}${c.suffix}').join(', ');
 
     buffer
       ..write(
@@ -85,10 +85,8 @@ class TableWriter {
     buffer.write(table.columns
         .where((c) => c.isToOne())
         .map((c) {
-          final f = c.features.firstWhere((f) => f is ToOne);
-          final referencedTable = (f as ToOne).referencedTable;
           final name = c.name.name;
-          return "$name: ${referencedTable.tableInfoName}(_db, '\${\$tableName}_$name'),";
+          return "$name${c.suffix}: ${c.getToOne().referencedTable.tableInfoName}(_db, '\${\$tableName}_$name'),";
         })
         .join());
 
@@ -157,8 +155,9 @@ class TableWriter {
         final converter = column.typeConverter;
         final loaded = '${table.tableInfoName}.${converter.fieldName}';
         loadType = '$loaded.mapToDart($loadType)';
-      } else if (column.features.any((f) => f is ToOne)) {
-        loadType = 'joinInfo[$getter].map(data, tablePrefix: joinInfo[$getter].\$tableName)';
+      } else if (column.isToOne()) {
+        final suffix = column.suffix;
+        loadType = 'joinInfo[$getter$suffix].map(data, tablePrefix: joinInfo[$getter$suffix].\$tableName)';
       }
 
       buffer.write('model.$getter = $loadType;');
@@ -175,8 +174,9 @@ class TableWriter {
       ..write('final map = <String, Variable> {};');
 
     for (var column in table.columns) {
-      buffer.write('if (d.${column.dartGetterName}.present) {');
-      final mapSetter = 'map[${asDartLiteral(column.name.name)}] = '
+      final suffix = column.suffix;
+      buffer.write('if (d.${column.dartGetterName}$suffix.present) {');
+      final mapSetter = 'map[${asDartLiteral(column.name.name + suffix)}] = '
           'Variable<${column.variableTypeName}, ${column.sqlTypeName}>';
 
       if (column.typeConverter != null) {
@@ -192,7 +192,7 @@ class TableWriter {
         buffer
           ..write(mapSetter)
           ..write('(')
-          ..write('d.${column.dartGetterName}.value')
+          ..write('d.${column.dartGetterName}$suffix.value')
           ..write(');');
       }
 
@@ -235,10 +235,11 @@ class TableWriter {
       additionalParams['defaultValue'] = column.defaultArgument;
     }
 
+    final suffix = column.suffix;
     expressionBuffer
       // GeneratedIntColumn('sql_name', tableName, isNullable, additionalField: true)
       ..write('return ${column.implColumnTypeName}')
-      ..write("('${column.name.name}', \$tableName, $isNullable, ");
+      ..write("('${column.name.name}$suffix', \$tableName, $isNullable, ");
 
     var first = true;
     additionalParams.forEach((name, value) {
@@ -255,7 +256,7 @@ class TableWriter {
 
     writeMemoizedGetterWithBody(
       buffer: buffer,
-      getterName: column.dartGetterName,
+      getterName: '${column.dartGetterName}$suffix',
       returnType: column.implColumnTypeName,
       code: expressionBuffer.toString(),
       // don't override on custom tables because we only override the column
@@ -267,9 +268,10 @@ class TableWriter {
   void _writeColumnVerificationMeta(
       StringBuffer buffer, SpecifiedColumn column) {
     // final VerificationMeta _targetDateMeta = const VerificationMeta('targetDate');
+    final suffix = column.suffix;
     buffer
       ..write('final VerificationMeta ${_fieldNameForColumnMeta(column)} = ')
-      ..write("const VerificationMeta('${column.dartGetterName}');\n");
+      ..write("const VerificationMeta('${column.dartGetterName}$suffix');\n");
   }
 
   void _writeValidityCheckMethod(StringBuffer buffer) {
@@ -291,12 +293,14 @@ class TableWriter {
         continue;
       }
 
+      final suffix = column.suffix;
+
       buffer
-        ..write('if (d.$getterName.present) {\n')
+        ..write('if (d.$getterName$suffix.present) {\n')
         ..write('context.handle('
             '$metaName, '
-            '$getterName.isAcceptableValue(d.$getterName.value, $metaName));')
-        ..write('} else if ($getterName.isRequired && isInserting) {\n')
+            '$getterName$suffix.isAcceptableValue(d.$getterName$suffix.value, $metaName));')
+        ..write('} else if ($getterName$suffix.isRequired && isInserting) {\n')
         ..write('context.missing($metaName);\n')
         ..write('}\n');
     }
@@ -304,7 +308,7 @@ class TableWriter {
   }
 
   String _fieldNameForColumnMeta(SpecifiedColumn column) {
-    return '_${column.dartGetterName}Meta';
+    return '_${column.dartGetterName}${column.suffix}Meta';
   }
 
   void _writePrimaryKeyOverride(StringBuffer buffer) {

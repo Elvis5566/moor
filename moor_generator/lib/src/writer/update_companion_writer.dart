@@ -1,4 +1,3 @@
-import 'package:moor_generator/src/model/specified_column.dart';
 import 'package:moor_generator/src/model/specified_table.dart';
 import 'package:moor_generator/src/state/session.dart';
 
@@ -25,7 +24,7 @@ class UpdateCompanionWriter {
   void _writeFields(StringBuffer buffer) {
     for (var column in table.columns) {
       buffer.write('final Value<${column.dartTypeName}>'
-          ' ${column.dartGetterName};\n');
+          ' ${column.dartGetterName}${column.suffix};\n');
     }
   }
 
@@ -33,7 +32,7 @@ class UpdateCompanionWriter {
     buffer.write('const ${table.updateCompanionName}({');
 
     for (var column in table.columns) {
-      buffer.write('this.${column.dartGetterName} = const Value.absent(),');
+      buffer.write('this.${column.dartGetterName}${column.suffix} = const Value.absent(),');
     }
 
     buffer.write('});\n');
@@ -47,7 +46,7 @@ class UpdateCompanionWriter {
         buffer.write(', ');
       }
       first = false;
-      buffer.write('Value<${column.dartTypeName}> ${column.dartGetterName}');
+      buffer.write('Value<${column.dartTypeName}> ${column.dartGetterName}${column.suffix}');
     }
 
     buffer
@@ -55,7 +54,8 @@ class UpdateCompanionWriter {
       ..write('return ${table.updateCompanionName}(');
     for (var column in table.columns) {
       final name = column.dartGetterName;
-      buffer.write('$name: $name ?? this.$name,');
+      final suffix = column.suffix;
+      buffer.write('$name$suffix: $name$suffix ?? this.$name$suffix,');
     }
     buffer.write(');\n}\n');
   }
@@ -67,14 +67,15 @@ class UpdateCompanionWriter {
     buffer.write('return $companionClass(');
     for (var column in table.columns) {
       final getter = column.dartGetterName;
-      String pKey = "";
+      var pKey = '';
+      var columnSuffix = '';
       if (column.isToOne()) {
-        final f = column.features.firstWhere((f) => f is ToOne);
-        final referencedColumn = (f as ToOne).referencedColumn;
-        pKey = '.${referencedColumn.name.name}';
+        final toOne = column.getToOne();
+        pKey = '.${toOne.referencedColumn.name.name}';
+        columnSuffix = toOne.columnSuffix;
       }
 
-      buffer.write('$getter: instance.$getter == null && nullToAbsent ? '
+      buffer.write('$getter$columnSuffix: instance.$getter == null && nullToAbsent ? '
           'const Value.absent() : Value(instance.$getter$pKey),');
     }
     buffer.write(');}');
