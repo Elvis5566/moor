@@ -67,10 +67,12 @@ class DatabaseWriter {
 
     final daoGetters = db.daos.map((d) => ReCase(d.displayName).camelCase);
     // Write List of tables, close bracket for class
+    final tables = tableGetters;
+    tables.addAll(daoGetters.map((d) => '...$d.tables'));
+
     buffer
       ..write('@override\nList<TableInfo> get allTables => [')
-      ..write(tableGetters.join(','))
-      ..write(daoGetters.map((d) => ',...$d.tables').join())
+      ..write(tables.join(','))
       ..write('];\n}');
   }
 }

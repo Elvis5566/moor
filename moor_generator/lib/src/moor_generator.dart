@@ -42,7 +42,7 @@ class MoorGenerator extends GeneratorForAnnotation<UseMoor> {
       }
     }
 
-    if (database.tables.isEmpty) return '';
+    if (database.tables.isEmpty && database.daos.isEmpty) return '';
 
     final buffer = StringBuffer()
       ..write('// ignore_for_file: unnecessary_brace_in_string_interps\n');
