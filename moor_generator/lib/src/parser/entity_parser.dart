@@ -95,7 +95,7 @@ class EntityParser {
 
   Future<SpecifiedColumn> _fieldToSpecifiedColumn(FieldElement field) async {
     final columns = await Future.wait(field.metadata
-        .map((ElementAnnotation annot) => annot.computeConstantValue())
+        .map((ElementAnnotation annotation) => annotation.computeConstantValue())
         .where((DartObject i) => isEntityColumnBase.isAssignableFromType(i.type))
         .map((DartObject i) => _makeSpecifiedColumn(field, i)));
 

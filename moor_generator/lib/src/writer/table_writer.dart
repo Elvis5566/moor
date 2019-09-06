@@ -86,7 +86,7 @@ class TableWriter {
         .where((c) => c.isToOne())
         .map((c) {
           final name = c.name.name;
-          return "$name${c.suffix}: ${c.getToOne().referencedTable.tableInfoName}(_db, '\${\$tableName}_$name'),";
+          return "${c.dartGetterName}${c.suffix}: ${c.getToOne().referencedTable.tableInfoName}(_db, '\${\$tableName}_$name'),";
         })
         .join());
 
