@@ -21,6 +21,9 @@ abstract class Expression<D, T extends SqlType<D>> implements Component {
   /// an SQL-injection.
   Expression<bool, BoolType> equals(D compare) =>
       Comparison.equal(this, Variable<D, T>(compare));
+
+  Expression operator &(Expression<bool, BoolType> other) => and(this as Expression<bool, BoolType>, other);
+  Expression operator |(Expression<bool, BoolType> other) => or(this as Expression<bool, BoolType>, other);
 }
 
 /// An expression that looks like "$a operator $b", where $a and $b itself
