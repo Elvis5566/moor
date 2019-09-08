@@ -144,10 +144,16 @@ class DaoGenerator extends GeneratorForAnnotation<UseDao> {
 
   void _writeLoad(SpecifiedTable table, StringBuffer buffer) {
     buffer.write('Future<${table.dartTypeName}> load(key) async {\n');
-    buffer.write('final list = await (select(${table.tableFieldName})..where((table) => table.primaryKey.first.equals(key))).get();\n');
+    buffer.write('final statement = select(${table.tableFieldName});\n');
+    buffer.write('statement.where((table) => table.primaryKey.first.equals(key));\n');
+    buffer.write('final joins = ${table.tableFieldName}.getJoins();\n');
+    buffer.write('final list = await (joins.length == 0\n');
+    buffer.write('? statement.get()\n');
+    buffer.write(': statement.join(joins).get().then((rows) {\n');
+    buffer.write('return rows.map((row) => row.readTable(${table.tableFieldName})).toList();\n');
+    buffer.write('}));\n');
     buffer.write('return list.length > 0 ? list.first : null;\n');
     buffer.write('}\n');
-
   }
 
   void _writePartialUpdate(SpecifiedTable table, StringBuffer buffer) {
