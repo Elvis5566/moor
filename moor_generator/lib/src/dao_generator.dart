@@ -66,6 +66,7 @@ class DaoGenerator extends GeneratorForAnnotation<UseDao> {
         _writeUpsert(table, buffer);
         _writeLoadAll(table, buffer);
         _writeLoad(table, buffer);
+        _writePartialUpdate(table, buffer);
 
       } else {
         buffer.write('$infoType get $getterName => db.$getterName;\n');
@@ -149,4 +150,18 @@ class DaoGenerator extends GeneratorForAnnotation<UseDao> {
 
   }
 
+  void _writePartialUpdate(SpecifiedTable table, StringBuffer buffer) {
+    final tableClassName = table.tableInfoName;
+
+    buffer.write('Future<int> partialUpdate(${tableClassName}Companion companion, {Expression<bool, BoolType> where($tableClassName table)}) {\n');
+
+    buffer.write('final statement = update(${table.tableFieldName});\n');
+    buffer.write('if (where != null) {\n');
+    buffer.write('statement.where(where);\n');
+    buffer.write('}\n');
+
+    buffer.write('return statement.write(companion);\n');
+
+    buffer.write('}\n');
+  }
 }
