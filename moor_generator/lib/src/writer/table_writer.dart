@@ -137,6 +137,13 @@ class TableWriter {
           .write('final $resolver = db.typeSystem.forDartType<$usedType>();\n');
     }
 
+    buffer.write('if (\$primaryKey.length > 0 ) {\n');
+    buffer.write('final primaryKeyName = \$primaryKey.first.\$name;\n');
+    buffer.write("if (data['\${effectivePrefix}\$primaryKeyName'] == null) {\n");
+    buffer.write('return null;\n');
+    buffer.write('}\n');
+    buffer.write('}\n');
+
     // finally, the mighty constructor invocation:
     buffer.write('$dataClassName model = $dataClassName();\n');
 
