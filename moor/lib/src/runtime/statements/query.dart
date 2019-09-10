@@ -8,6 +8,8 @@ import 'package:moor/src/runtime/expressions/custom.dart';
 import 'package:moor/src/runtime/expressions/expression.dart';
 import 'package:moor/src/utils/single_transformer.dart';
 
+typedef Expression<bool, BoolType> WhereFilter<T extends Table>(T table);
+
 /// Statement that operates with data that already exists (select, delete,
 /// update).
 abstract class Query<T extends Table, D extends DataClass> {

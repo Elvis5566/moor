@@ -116,7 +116,7 @@ class DaoGenerator extends GeneratorForAnnotation<UseDao> {
   void _writeLoadAll(SpecifiedTable table, StringBuffer buffer) {
     final tableClassName = table.tableInfoName;
 
-    buffer.write('Future<List<${table.dartTypeName}>> loadAll({Expression<bool, BoolType> where($tableClassName table), '
+    buffer.write('Future<List<${table.dartTypeName}>> loadAll({WhereFilter<$tableClassName> where, '
         'int limit, int offset, List<OrderClauseGenerator<$tableClassName>> orderBy}) {\n');
 
     buffer.write('final statement = select(${table.tableFieldName});\n');
@@ -159,7 +159,7 @@ class DaoGenerator extends GeneratorForAnnotation<UseDao> {
   void _writePartialUpdate(SpecifiedTable table, StringBuffer buffer) {
     final tableClassName = table.tableInfoName;
 
-    buffer.write('Future<int> partialUpdate(${tableClassName}Companion companion, {Expression<bool, BoolType> where($tableClassName table)}) {\n');
+    buffer.write('Future<int> partialUpdate(${tableClassName}Companion companion, {WhereFilter<$tableClassName> where}) {\n');
 
     buffer.write('final statement = update(${table.tableFieldName});\n');
     buffer.write('if (where != null) {\n');
