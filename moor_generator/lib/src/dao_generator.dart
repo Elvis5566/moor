@@ -117,15 +117,11 @@ class DaoGenerator extends GeneratorForAnnotation<UseDao> {
     final tableClassName = table.tableInfoName;
 
     buffer.write('Future<List<${table.dartTypeName}>> loadAll({WhereFilter<$tableClassName> where, '
-        'int limit, int offset, List<OrderClauseGenerator<$tableClassName>> orderBy}) {\n');
+        'int limit, int offset = 0, List<OrderClauseGenerator<$tableClassName>> orderBy}) {\n');
 
     buffer.write('final statement = select(${table.tableFieldName});\n');
     buffer.write('if (where != null) {\n');
     buffer.write('statement.where(where);\n');
-    buffer.write('}\n');
-
-    buffer.write('if (limit != null) {\n');
-    buffer.write('statement.limit(limit, offset: offset);\n');
     buffer.write('}\n');
 
     buffer.write('if (orderBy != null) {\n');
@@ -134,11 +130,21 @@ class DaoGenerator extends GeneratorForAnnotation<UseDao> {
 
     buffer.write('final joins = ${table.tableFieldName}.getJoins();\n');
 
-    buffer.write('return joins.length == 0\n');
-    buffer.write('? statement.get()\n');
-    buffer.write(': statement.join(joins).get().then((rows) {\n');
+    buffer.write('if (joins.length == 0) {\n');
+    buffer.write('if (limit != null) {\n');
+    buffer.write('statement.limit(limit, offset: offset);\n');
+    buffer.write('}\n');
+    buffer.write('return statement.get();\n');
+    buffer.write('} else {\n');
+    buffer.write('final joinedStatement = statement.join(joins);\n');
+    buffer.write('if (limit != null) {\n');
+    buffer.write('joinedStatement.limit(limit, offset: offset);\n');
+    buffer.write('}\n');
+    buffer.write('return joinedStatement.get().then((rows) {\n');
     buffer.write('return rows.map((row) => row.readTable(${table.tableFieldName})).toList();\n');
     buffer.write('});\n');
+    buffer.write('}\n');
+
     buffer.write('}\n');
   }
 
