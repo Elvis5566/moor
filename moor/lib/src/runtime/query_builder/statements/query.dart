@@ -1,5 +1,7 @@
 part of '../query_builder.dart';
 
+typedef Expression<bool, BoolType> WhereFilter<T extends Table>(T table);
+
 /// Statement that operates with data that already exists (select, delete,
 /// update).
 abstract class Query<T extends Table, D extends DataClass> {
