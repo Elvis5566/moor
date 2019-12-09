@@ -76,6 +76,22 @@ mixin TableInfo<TableDsl extends Table, D> on Table
   @override
   TableInfo<TableDsl, D> createAlias(String alias);
 
+  List<Join> getJoins() {
+    final joins = <Join>[];
+    final joinInfo = buildJoinInfo();
+
+    joins.addAll(joinInfo.keys.map((column) {
+      final table = joinInfo[column]!;
+      return leftOuterJoin(table, column.equalsExp(table.primaryKey.first));
+    }));
+
+    joins.addAll(joinInfo.values.expand((table) => table.getJoins()));
+
+    return joins;
+  }
+
+  Map<GeneratedColumn, TableInfo> buildJoinInfo() => {};
+
   @override
   bool operator ==(dynamic other) {
     // tables are singleton instances except for aliases
