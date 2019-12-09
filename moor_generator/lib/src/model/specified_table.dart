@@ -76,12 +76,15 @@ class SpecifiedTable {
   /// for instance by using a `REFERENCES` column constraint.
   final Set<SpecifiedTable> references = {};
 
+  final bool fromEntity;
+
   SpecifiedTable(
       {this.fromClass,
       this.columns,
       this.sqlName,
       this.dartTypeName,
       this.primaryKey,
+      this.fromEntity,
       String overriddenName,
       this.overrideWithoutRowId,
       this.overrideTableConstraints,
