@@ -24,14 +24,12 @@ abstract class DataClass {
   /// Converts this object into a representation that can be encoded with
   /// [json]. The [serializer] can be used to configure how individual values
   /// will be encoded.
-  Map<String, dynamic> toJson(
-      {ValueSerializer serializer = const ValueSerializer.defaults()});
+  Map<String, dynamic> toJson();
 
   /// Converts this object into a json representation. The [serializer] can be
   /// used to configure how individual values will be encoded.
-  String toJsonString(
-      {ValueSerializer serializer = const ValueSerializer.defaults()}) {
-    return json.encode(toJson(serializer: serializer));
+  String toJsonString() {
+    return json.encode(toJson());
   }
 
   /// Used internally be generated code
