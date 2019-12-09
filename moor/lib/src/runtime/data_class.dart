@@ -32,14 +32,14 @@ abstract class DataClass {
   /// [json]. The [serializer] can be used to configure how individual values
   /// will be encoded. By default, [MoorRuntimeOptions.defaultSerializer] will
   /// be used. See [ValueSerializer.defaults] for details.
-  Map<String, dynamic> toJson({ValueSerializer? serializer});
+  Map<String, dynamic> toJson();
 
   /// Converts this object into a json representation. The [serializer] can be
   /// used to configure how individual values will be encoded. By default,
   /// [MoorRuntimeOptions.defaultSerializer] will be used. See
   /// [ValueSerializer.defaults] for details.
-  String toJsonString({ValueSerializer? serializer}) {
-    return json.encode(toJson(serializer: serializer));
+  String toJsonString() {
+    return json.encode(toJson());
   }
 
   /// Used internally be generated code
