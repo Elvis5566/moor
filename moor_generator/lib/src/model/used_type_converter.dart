@@ -20,7 +20,9 @@ class UsedTypeConverter {
   /// The type that will be written to the database.
   final ColumnType sqlType;
 
-  DartType get typeOfConverter => expression.staticType;
+  final DartType converterType;
+
+  DartType get typeOfConverter => converterType ?? expression.staticType;
 
   /// Type converters are stored as static fields in the table that created
   /// them. This will be the field name for this converter.
@@ -29,5 +31,6 @@ class UsedTypeConverter {
   UsedTypeConverter(
       {@required this.expression,
       @required this.mappedType,
+      this.converterType,
       @required this.sqlType});
 }
