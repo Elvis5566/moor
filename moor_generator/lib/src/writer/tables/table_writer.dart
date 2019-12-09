@@ -5,6 +5,7 @@ import 'package:moor_generator/src/writer/tables/data_class_writer.dart';
 import 'package:moor_generator/src/writer/tables/update_companion_writer.dart';
 import 'package:moor_generator/src/writer/utils/memoized_getter.dart';
 import 'package:moor_generator/src/writer/writer.dart';
+import 'package:recase/recase.dart';
 
 class TableWriter {
   final SpecifiedTable table;
@@ -20,7 +21,9 @@ class TableWriter {
   }
 
   void writeDataClass() {
-    DataClassWriter(table, scope.child()).write();
+    if (!table.fromEntity) {
+      DataClassWriter(table, scope.child()).write();
+    }
     UpdateCompanionWriter(table, scope.child()).write();
   }
 
@@ -47,7 +50,7 @@ class TableWriter {
 
     // Generate $columns, $tableName, asDslTable getters
     final columnsWithGetters =
-        table.columns.map((c) => c.dartGetterName).join(', ');
+      table.columns.map((c) => '${c.dartGetterName}${c.suffix}').join(', ');
 
     _buffer
       ..write(
@@ -64,6 +67,11 @@ class TableWriter {
     _writeMappingMethod();
     _writeReverseMappingMethod();
 
+    if (table.fromEntity) {
+      _writeFromDataMethod();
+      _writeBuildJoinInfo();
+    }
+
     _writeAliasGenerator();
 
     _writeConvertersAsStaticFields();
@@ -75,8 +83,8 @@ class TableWriter {
 
   void _writeConvertersAsStaticFields() {
     for (var converter in table.converters) {
-      final typeName = converter.typeOfConverter.displayName;
-      final code = converter.expression.toSource();
+      final typeName = converter.typeOfConverter.name;
+      final code = converter.expression != null ? converter.expression.toSource() : 'const $typeName()';
       _buffer..write('static $typeName ${converter.fieldName} = $code;');
     }
   }
@@ -90,7 +98,7 @@ class TableWriter {
       ..write(
           "final effectivePrefix = tablePrefix != null ? '\$tablePrefix.' : null;")
       ..write(
-          'return $dataClassName.fromData(data, _db, prefix: effectivePrefix);\n')
+          'return ${table.fromEntity ? "" : '$dataClassName.'}fromData(data, _db, prefix: effectivePrefix);\n')
       ..write('}\n');
   }
 
@@ -102,8 +110,9 @@ class TableWriter {
       ..write('final map = <String, Variable> {};');
 
     for (var column in table.columns) {
-      _buffer.write('if (d.${column.dartGetterName}.present) {');
-      final mapSetter = 'map[${asDartLiteral(column.name.name)}] = '
+      final suffix = column.suffix;
+      _buffer.write('if (d.${column.dartGetterName}$suffix.present) {');
+      final mapSetter = 'map[${asDartLiteral(column.name.name + suffix)}] = '
           'Variable<${column.variableTypeName}, ${column.sqlTypeName}>';
 
       if (column.typeConverter != null) {
@@ -119,7 +128,7 @@ class TableWriter {
         _buffer
           ..write(mapSetter)
           ..write('(')
-          ..write('d.${column.dartGetterName}.value')
+          ..write('d.${column.dartGetterName}$suffix.value')
           ..write(');');
       }
 
@@ -144,7 +153,7 @@ class TableWriter {
         if (feature.maxLength != null) {
           additionalParams['maxTextLength'] = feature.maxLength.toString();
         }
-      } else if (feature is PrimaryKey && column.type == ColumnType.integer) {
+      } else if (feature is PrimaryKey) {
         // this field is only relevant for integer columns because an INTEGER
         // PRIMARY KEY is an alias for the rowid which should allow absent
         // values during insert, even without the `AUTOINCREMENT` clause.
@@ -161,10 +170,11 @@ class TableWriter {
       additionalParams['defaultValue'] = column.defaultArgument;
     }
 
+    final suffix = column.suffix;
     expressionBuffer
       // GeneratedIntColumn('sql_name', tableName, isNullable, additionalField: true)
       ..write('return ${column.implColumnTypeName}')
-      ..write("('${column.name.name}', \$tableName, $isNullable, ");
+      ..write("('${column.name.name}$suffix', \$tableName, $isNullable, ");
 
     var first = true;
     additionalParams.forEach((name, value) {
@@ -181,7 +191,7 @@ class TableWriter {
 
     writeMemoizedGetterWithBody(
       buffer: _buffer,
-      getterName: column.dartGetterName,
+      getterName: '${column.dartGetterName}$suffix',
       returnType: column.implColumnTypeName,
       code: expressionBuffer.toString(),
       // don't override on custom tables because we only override the column
@@ -193,9 +203,10 @@ class TableWriter {
   void _writeColumnVerificationMeta(SpecifiedColumn column) {
     // final VerificationMeta _targetDateMeta = const VerificationMeta('targetDate');
     if (!scope.writer.options.skipVerificationCode) {
+      final suffix = column.suffix;
       _buffer
         ..write('final VerificationMeta ${_fieldNameForColumnMeta(column)} = ')
-        ..write("const VerificationMeta('${column.dartGetterName}');\n");
+        ..write("const VerificationMeta('${column.dartGetterName}$suffix');\n");
     }
   }
 
@@ -221,12 +232,14 @@ class TableWriter {
         continue;
       }
 
+      final suffix = column.suffix;
+
       _buffer
-        ..write('if (d.$getterName.present) {\n')
+        ..write('if (d.$getterName$suffix.present) {\n')
         ..write('context.handle('
             '$metaName, '
-            '$getterName.isAcceptableValue(d.$getterName.value, $metaName));')
-        ..write('} else if ($getterName.isRequired && isInserting) {\n')
+            '$getterName$suffix.isAcceptableValue(d.$getterName$suffix.value, $metaName));')
+        ..write('} else if ($getterName$suffix.isRequired && isInserting) {\n')
         ..write('context.missing($metaName);\n')
         ..write('}\n');
     }
@@ -234,7 +247,7 @@ class TableWriter {
   }
 
   String _fieldNameForColumnMeta(SpecifiedColumn column) {
-    return '_${column.dartGetterName}Meta';
+    return '_${column.dartGetterName}${column.suffix}Meta';
   }
 
   void _writePrimaryKeyOverride() {
@@ -297,5 +310,80 @@ class TableWriter {
         ..write('@override\n')
         ..write('final bool dontWriteConstraints = $value;\n');
     }
+  }
+
+  void _writeBuildJoinInfo() {
+
+    _buffer.write('@override\n');
+    _buffer.write('Map<GeneratedColumn, TableInfo> buildJoinInfo() {\n');
+    _buffer.write('return {\n');
+    _buffer.write(table.columns
+        .where((c) => c.isToOne())
+        .map((c) {
+      final name = c.name.name;
+      return "${c.dartGetterName}${c.suffix}: ${c.getToOne().referencedTable.tableInfoName}(_db, '\${\$tableName}_$name'),";
+    })
+        .join());
+
+    _buffer.write('};\n');
+    _buffer.write('}\n');
+  }
+
+  void _writeFromDataMethod() {
+    final dataClassName = table.dartTypeName;
+
+    _buffer
+      ..write('$dataClassName fromData')
+      ..write('(Map<String, dynamic> data, GeneratedDatabase db, ')
+      ..write('{String prefix}) {\n')
+      ..write('final joinInfo = buildJoinInfo();\n')
+      ..write("final effectivePrefix = prefix ?? '';");
+
+    final dartTypeToResolver = <String, String>{};
+
+    final types = table.columns.map((c) => c.variableTypeName).toSet();
+    for (var usedType in types) {
+      // final intType = db.typeSystem.forDartType<int>();
+      final resolver = '${ReCase(usedType).camelCase}Type';
+      dartTypeToResolver[usedType] = resolver;
+
+      _buffer
+          .write('final $resolver = db.typeSystem.forDartType<$usedType>();\n');
+    }
+
+    _buffer.write('if (\$primaryKey.length > 0 ) {\n');
+    _buffer.write('final primaryKeyName = \$primaryKey.first.\$name;\n');
+    _buffer.write("if (data['\${effectivePrefix}\$primaryKeyName'] == null) {\n");
+    _buffer.write('return null;\n');
+    _buffer.write('}\n');
+    _buffer.write('}\n');
+
+    // finally, the mighty constructor invocation:
+    _buffer.write('$dataClassName model = $dataClassName();\n');
+
+    for (var column in table.columns) {
+      // id: intType.mapFromDatabaseResponse(data["id])
+      final getter = column.dartGetterName;
+      final resolver = dartTypeToResolver[column.variableTypeName];
+      final columnName = "'\${effectivePrefix}${column.name.name}'";
+
+      var loadType = '$resolver.mapFromDatabaseResponse(data[$columnName])';
+
+      // run the loaded expression though the custom converter for the final
+      // result.
+      if (column.typeConverter != null) {
+        // stored as a static field
+        final converter = column.typeConverter;
+        final loaded = '${table.tableInfoName}.${converter.fieldName}';
+        loadType = '$loaded.mapToDart($loadType)';
+      } else if (column.isToOne()) {
+        final suffix = column.suffix;
+        loadType = 'joinInfo[$getter$suffix].map(data, tablePrefix: joinInfo[$getter$suffix].\$tableName)';
+      }
+
+      _buffer.write('model.$getter = $loadType;');
+    }
+
+    _buffer.write('return model;\n}\n');
   }
 }
