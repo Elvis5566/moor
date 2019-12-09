@@ -112,11 +112,14 @@ class GeneratedTextColumn extends GeneratedColumn<String, StringType>
   /// Optional. The maximum text length.
   final int maxTextLength;
 
+  final bool declaredAsPrimaryKey;
+
   /// Used by generated code.
   GeneratedTextColumn(
     String name,
     String tableName,
     bool nullable, {
+    this.declaredAsPrimaryKey = false,
     this.minTextLength,
     this.maxTextLength,
     String $customConstraints,
@@ -144,6 +147,14 @@ class GeneratedTextColumn extends GeneratedColumn<String, StringType>
 
     return const VerificationResult.success();
   }
+
+  @override
+  void writeCustomConstraints(StringBuffer into) {
+    if (declaredAsPrimaryKey) {
+      into.write(' PRIMARY KEY');
+    }
+  }
+
 }
 
 /// Implementation for [BoolColumn].
