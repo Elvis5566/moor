@@ -100,6 +100,10 @@ class ParseDartStep extends Step {
     });
   }
 
+  Future<SpecifiedTable> parseEntity(DartType type) async {
+    return _parser.parseEntity(type);
+  }
+
   List<DeclaredQuery> readDeclaredQueries(Map<DartObject, DartObject> obj) {
     return obj.entries.map((entry) {
       final key = entry.key.toStringValue();
