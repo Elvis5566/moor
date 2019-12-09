@@ -65,9 +65,13 @@ class DatabaseWriter {
     }
 
     // Write List of tables, close bracket for class
+    final daoGetters = db.daos.map((d) => ReCase(d.displayName).camelCase);
+    final tables = tableGetters;
+    tables.addAll(daoGetters.map((d) => '...$d.tables'));
+
     dbScope.leaf()
       ..write('@override\nList<TableInfo> get allTables => [')
-      ..write(tableGetters.join(','))
+      ..write(tables.join(','))
       ..write('];\n}');
   }
 }
