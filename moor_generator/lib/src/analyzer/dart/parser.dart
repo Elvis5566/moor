@@ -4,6 +4,7 @@ import 'package:meta/meta.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:moor/sqlite_keywords.dart';
+import 'package:moor_generator/src/analyzer/dart/entity_parser.dart';
 import 'package:moor_generator/src/analyzer/errors.dart';
 import 'package:moor_generator/src/analyzer/runner/steps.dart';
 import 'package:moor_generator/src/analyzer/sql_queries/meta/declarations.dart';
@@ -26,10 +27,12 @@ class MoorDartParser {
 
   ColumnParser _columnParser;
   TableParser _tableParser;
+  EntityParser _entityParser;
 
   MoorDartParser(this.step) {
     _columnParser = ColumnParser(this);
     _tableParser = TableParser(this);
+    _entityParser = EntityParser(this);
   }
 
   Future<SpecifiedTable> parseTable(ClassElement classElement) {
@@ -39,6 +42,11 @@ class MoorDartParser {
   Future<SpecifiedColumn> parseColumn(
       MethodDeclaration declaration, Element element) {
     return Future.value(_columnParser.parse(declaration, element));
+  }
+
+  Future<SpecifiedTable> parseEntity(DartType type) async {
+    final entityClass = type.element as ClassElement;
+    return _entityParser.parse(entityClass);
   }
 
   @visibleForTesting
