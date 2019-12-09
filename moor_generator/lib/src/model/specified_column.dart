@@ -1,5 +1,6 @@
 import 'package:moor_generator/src/analyzer/sql_queries/meta/declarations.dart';
 import 'package:moor_generator/src/backends/build/moor_builder.dart';
+import 'package:moor_generator/src/model/specified_table.dart';
 import 'package:moor_generator/src/model/used_type_converter.dart';
 
 enum ColumnType { integer, text, boolean, datetime, blob, real }
@@ -174,6 +175,13 @@ class SpecifiedColumn {
   /// this column.
   String get sqlTypeName => sqlTypes[type];
 
+  bool isToOne() => features.any((f) => f is ToOne);
+
+  ToOne getToOne() => features.firstWhere((f) => f is ToOne) as ToOne;
+
+  String get suffix => isToOne() ? getToOne().columnSuffix : '';
+
+
   SpecifiedColumn({
     this.type,
     this.dartGetterName,
@@ -234,4 +242,12 @@ class Reference extends ColumnFeature {
   final SpecifiedColumn referencedColumn;
 
   const Reference(this.referencedColumn);
+}
+
+class ToOne extends ColumnFeature {
+  final SpecifiedTable referencedTable;
+  final SpecifiedColumn referencedColumn;
+  final String columnSuffix = 'Id';
+
+  const ToOne(this.referencedTable, this.referencedColumn);
 }
