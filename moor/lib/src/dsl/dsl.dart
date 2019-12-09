@@ -6,3 +6,4 @@ import 'package:moor/moor.dart';
 part 'columns.dart';
 part 'database.dart';
 part 'table.dart';
+part 'entity.dart';
