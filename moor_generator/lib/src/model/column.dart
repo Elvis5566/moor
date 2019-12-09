@@ -1,7 +1,7 @@
 //@dart=2.9
 import 'package:moor_generator/src/analyzer/options.dart';
 import 'package:moor_generator/writer.dart';
-
+import 'package:moor_generator/src/model/table.dart';
 import 'declarations/declaration.dart';
 import 'types.dart';
 import 'used_type_converter.dart';
@@ -166,6 +166,12 @@ class MoorColumn implements HasDeclaration, HasType {
   @override
   bool get isArray => false;
 
+  bool isToOne() => features.any((f) => f is ToOne);
+
+  ToOne getToOne() => features.firstWhere((f) => f is ToOne) as ToOne;
+
+  String get suffix => isToOne() ? getToOne().columnSuffix : '';
+
   MoorColumn({
     this.type,
     this.dartGetterName,
@@ -223,4 +229,12 @@ class LimitingTextLength extends ColumnFeature {
     return typedOther.minLength == minLength &&
         typedOther.maxLength == maxLength;
   }
+}
+
+class ToOne extends ColumnFeature {
+  final MoorTable referencedTable;
+  final MoorColumn referencedColumn;
+  final String columnSuffix = 'Id';
+
+  const ToOne(this.referencedTable, this.referencedColumn);
 }

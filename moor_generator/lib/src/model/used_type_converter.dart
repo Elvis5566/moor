@@ -28,6 +28,8 @@ class UsedTypeConverter {
   /// The type that will be written to the database.
   final ColumnType sqlType;
 
+  final DartType converterType;
+
   /// Type converters are stored as static fields in the table that created
   /// them. This will be the field name for this converter.
   String get fieldName => '\$converter$index';
@@ -38,6 +40,7 @@ class UsedTypeConverter {
   UsedTypeConverter({
     @required this.expression,
     @required this.mappedType,
+    this.converterType,
     @required this.sqlType,
   });
 
@@ -68,8 +71,12 @@ class UsedTypeConverter {
 
   /// A suitable typename to store an instance of the type converter used here.
   String converterNameInCode(GenerationOptions options) {
-    final sqlDartType = dartTypeNames[sqlType];
-    return 'TypeConverter<${mappedType.codeString(options)}, $sqlDartType>';
+    if (converterType == null) {
+      final sqlDartType = dartTypeNames[sqlType];
+      return 'TypeConverter<${mappedType.codeString(options)}, $sqlDartType>';
+    } else {
+      return converterType.getDisplayString(withNullability: false);
+    }
   }
 }
 

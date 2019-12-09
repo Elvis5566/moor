@@ -47,8 +47,11 @@ class UseDaoParser {
             ?.toList() ??
         [];
 
+    final entityType = annotation.peek('entity')?.objectValue?.toTypeValue();
     final parsedTables = await step.parseTables(tableTypes, element);
     final parsedQueries = step.readDeclaredQueries(queryStrings);
+    final entityTable = await step.parseEntity(entityType);
+    parsedTables.add(entityTable);
 
     return Dao(
       declaration: DatabaseOrDaoDeclaration(element, step.file),

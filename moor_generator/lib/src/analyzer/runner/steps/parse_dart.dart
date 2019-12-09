@@ -16,6 +16,7 @@ class ParseDartStep extends Step {
   final LibraryElement library;
 
   MoorDartParser _parser;
+
   MoorDartParser get parser => _parser;
 
   final Map<ClassElement, MoorTable> _tables = {};
@@ -121,6 +122,20 @@ class ParseDartStep extends Step {
       // only keep tables that were resolved successfully
       return List.from(list.where((t) => t != null));
     });
+  }
+
+  Future<MoorTable> parseEntity(DartType type) async {
+    final element = type.element as ClassElement;
+
+    if (!_tables.containsKey(element)) {
+      final table = await _parser.parseEntity(element);
+      _tables[element] = table;
+
+      // if (table != null) {
+      //   _lintDartTable(table, element);
+      // }
+    }
+    return _tables[element];
   }
 
   List<DeclaredQuery> readDeclaredQueries(Map<DartObject, DartObject> obj) {
