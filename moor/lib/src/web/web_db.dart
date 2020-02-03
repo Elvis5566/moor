@@ -13,8 +13,8 @@ class WebDatabase extends DelegatedDatabase {
   /// [name] can be used to identify multiple databases. The optional
   /// [initializer] can be used to initialize the database if it doesn't exist.
   WebDatabase(String name,
-      {bool logStatements = false, CreateWebDatabase? initializer})
-      : super(_WebDelegate(MoorWebStorage(name), initializer),
+      {SqlJsConfig config, bool logStatements = false, CreateWebDatabase? initializer})
+      : super(_WebDelegate(MoorWebStorage(name), initializer, config),
             logStatements: logStatements, isSequential: true);
 
   /// A database executor that works on the web.
@@ -29,6 +29,7 @@ class WebDatabase extends DelegatedDatabase {
 }
 
 class _WebDelegate extends DatabaseDelegate {
+  final SqlJsConfig config;
   final MoorWebStorage storage;
   final CreateWebDatabase? initializer;
 
@@ -37,7 +38,7 @@ class _WebDelegate extends DatabaseDelegate {
 
   bool _inTransaction = false;
 
-  _WebDelegate(this.storage, this.initializer);
+  _WebDelegate(this.storage, this.initializer, this.config);
 
   @override
   set isInTransaction(bool value) {
@@ -68,7 +69,7 @@ class _WebDelegate extends DatabaseDelegate {
     final dbVersion = db.schemaVersion;
     assert(dbVersion >= 1, 'Database schema version needs to be at least 1');
 
-    final module = await initSqlJs();
+    final module = await initSqlJs(config);
 
     await storage.open();
     var restored = await storage.restore();
