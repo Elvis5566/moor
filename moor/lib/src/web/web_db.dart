@@ -4,20 +4,21 @@ part of 'package:moor/moor_web.dart';
 /// include the latest version of `sql.js` in your html.
 class WebDatabase extends DelegatedDatabase {
   /// A database executor that works on the web.
-  WebDatabase(String name, {bool logStatements = false})
-      : super(_WebDelegate(name),
+  WebDatabase(String name, {SqlJsConfig config, bool logStatements = false})
+      : super(_WebDelegate(name, config),
             logStatements: logStatements, isSequential: true);
 }
 
 class _WebDelegate extends DatabaseDelegate {
   final String name;
+  final SqlJsConfig config;
   SqlJsDatabase _db;
 
   String get _persistenceKey => 'moor_db_str_$name';
 
   bool _inTransaction = false;
 
-  _WebDelegate(this.name);
+  _WebDelegate(this.name, this.config);
 
   @override
   set isInTransaction(bool value) {
@@ -46,7 +47,7 @@ class _WebDelegate extends DatabaseDelegate {
     final dbVersion = db.schemaVersion;
     assert(dbVersion >= 1, 'Database schema version needs to be at least 1');
 
-    final module = await initSqlJs();
+    final module = await initSqlJs(config);
     final restored = _restoreDb();
     _db = module.createDatabase(restored);
   }

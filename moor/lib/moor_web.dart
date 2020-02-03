@@ -16,5 +16,6 @@ import 'src/web/binary_string_conversion.dart';
 import 'src/web/sql_js.dart';
 
 export 'moor.dart';
+export 'src/web/sql_js.dart' show SqlJsConfig;
 
 part 'src/web/web_db.dart';

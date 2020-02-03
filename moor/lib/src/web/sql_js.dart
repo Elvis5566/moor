@@ -10,7 +10,7 @@ import 'dart:typed_data';
 Completer<SqlJsModule> _moduleCompleter;
 
 /// Calls the `initSqlJs` function from the native sql.js library.
-Future<SqlJsModule> initSqlJs() {
+Future<SqlJsModule> initSqlJs([SqlJsConfig config]) {
   if (_moduleCompleter != null) {
     return _moduleCompleter.future;
   }
@@ -23,10 +23,22 @@ Future<SqlJsModule> initSqlJs() {
             'the web, which might help you fix this.'));
   }
 
-  (context.callMethod('initSqlJs') as JsObject)
+  (context.callMethod('initSqlJs', config?.asParameter()) as JsObject)
       .callMethod('then', [_handleModuleResolved]);
 
   return _moduleCompleter.future;
+}
+
+/// This is typed config for initSqlJs.
+class SqlJsConfig {
+  /// Constructor
+  SqlJsConfig({this.locateFile});
+
+  /// locateFile
+  final String Function(String filename, String prefix) locateFile;
+
+  /// Convert to Js Object
+  List asParameter() => [JsObject.jsify({'locateFile': locateFile})];
 }
 
 // We're extracting this into its own method so that we don't have to call
