@@ -69,17 +69,31 @@ class DaoGenerator extends Generator implements BaseGenerator {
   }
 
   void _writeUpsert(SpecifiedTable table, StringBuffer buffer) {
-    buffer.write('Future upsert(${table.dartTypeName} instance) {\n');
+    buffer.write('Future upsert(${table.dartTypeName} instance, [Batch _batch]) async {\n');
     final toOneColumns = table.columns.where((c) => c.features.any((f) => f is ToOne));
 
-    buffer.write('return transaction(() async {\n');
+    buffer.write('if (_batch != null) {\n');
     for (final column in toOneColumns) {
-      buffer.write('await instance.${column.dartGetterName}?.save();\n');
+      buffer.write('instance.${column.dartGetterName}?.save(batch: _batch);\n');
     }
-
-    buffer.write('await into(${table.tableFieldName}).insert(instance, orReplace: true);\n');
-
+    buffer.write('_batch.insert(${table.tableFieldName}, instance, mode: InsertMode.insertOrReplace);\n');
+    buffer.write('} else {\n');
+    buffer.write('await batch((b) {\n');
+    for (final column in toOneColumns) {
+      buffer.write('instance.${column.dartGetterName}?.save(batch: b);\n');
+    }
+    buffer.write('b.insert(${table.tableFieldName}, instance, mode: InsertMode.insertOrReplace);\n');
     buffer.write('});\n');
+    buffer.write('}\n');
+
+//    buffer.write('return transaction(() async {\n');
+//    for (final column in toOneColumns) {
+//      buffer.write('await instance.${column.dartGetterName}?.save();\n');
+//    }
+//
+//    buffer.write('await into(${table.tableFieldName}).insert(instance, orReplace: true);\n');
+
+//    buffer.write('});\n');
     buffer.write('}\n');
   }
 
