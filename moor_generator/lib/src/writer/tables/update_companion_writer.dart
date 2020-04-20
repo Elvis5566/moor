@@ -1,6 +1,7 @@
 import 'package:moor_generator/src/model/specified_column.dart';
 import 'package:moor_generator/src/model/specified_table.dart';
 import 'package:moor_generator/src/writer/writer.dart';
+import 'package:recase/recase.dart';
 
 class UpdateCompanionWriter {
   final SpecifiedTable table;
@@ -125,7 +126,7 @@ class UpdateCompanionWriter {
       var columnSuffix = '';
       if (column.isToOne()) {
         final toOne = column.getToOne();
-        pKey = '.${toOne.referencedColumn.name.name}';
+        pKey = '.${ReCase(toOne.referencedColumn.name.name).camelCase}';
         columnSuffix = toOne.columnSuffix;
       }
 
