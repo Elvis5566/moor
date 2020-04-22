@@ -133,16 +133,16 @@ class DateTimeType extends SqlType<DateTime> {
   DateTime? mapFromDatabaseResponse(dynamic response) {
     if (response == null) return null;
 
-    final unixSeconds = response as int;
+    final unixMilliseconds = response as int;
 
-    return DateTime.fromMillisecondsSinceEpoch(unixSeconds * 1000);
+    return DateTime.fromMillisecondsSinceEpoch(unixMilliseconds);
   }
 
   @override
   String mapToSqlConstant(DateTime? content) {
     if (content == null) return 'NULL';
 
-    return (content.millisecondsSinceEpoch ~/ 1000).toString();
+    return content.millisecondsSinceEpoch.toString();
   }
 
   @override
@@ -150,7 +150,7 @@ class DateTimeType extends SqlType<DateTime> {
     // ignore: avoid_returning_null
     if (content == null) return null;
 
-    return content.millisecondsSinceEpoch ~/ 1000;
+    return content.millisecondsSinceEpoch;
   }
 }
 

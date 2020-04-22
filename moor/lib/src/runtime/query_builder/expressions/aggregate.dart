@@ -83,7 +83,7 @@ extension ArithmeticAggregates<DT extends num> on Expression<DT?> {
 /// Provides aggregate functions that are available on date time expressions.
 extension DateTimeAggregate on Expression<DateTime?> {
   /// Return the average of all non-null values in this group.
-  Expression<DateTime> avg() => secondsSinceEpoch.avg().roundToInt().dartCast();
+  Expression<DateTime> avg() => millisecondsSinceEpoch.avg().roundToInt().dartCast();
 
   /// Return the maximum of all non-null values in this group.
   ///
