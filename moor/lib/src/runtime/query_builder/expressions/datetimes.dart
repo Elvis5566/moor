@@ -86,7 +86,7 @@ extension DateTimeExpressions on Expression<DateTime, DateTimeType> {
   /// assumed to be in utc.
   // for moor, date times are just unix timestamps, so we don't need to rewrite
   // anything when converting
-  Expression<int, IntType> get secondsSinceEpoch => dartCast();
+  Expression<int, IntType> get millisecondsSinceEpoch => dartCast();
 }
 
 /// Expression that extracts components out of a date time by using the builtin
