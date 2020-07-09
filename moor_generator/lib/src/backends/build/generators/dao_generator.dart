@@ -37,6 +37,7 @@ class DaoGenerator extends Generator implements BaseGenerator {
           );
 
           _writeUpsert(table, classScope.leaf());
+          _writeUpsertAll(table, classScope.leaf());
           _writeLoadAll(table, classScope.leaf());
           _writeLoad(table, classScope.leaf());
           _writePartialUpdate(table, classScope.leaf());
@@ -80,6 +81,19 @@ class DaoGenerator extends Generator implements BaseGenerator {
     buffer.write('await into(${table.tableFieldName}).insert(instance, orReplace: true);\n');
 
     buffer.write('});\n');
+    buffer.write('}\n');
+  }
+
+  void _writeUpsertAll(SpecifiedTable table, StringBuffer buffer) {
+    buffer.write('Future upsertAll(List<${table.dartTypeName}> instances) async {\n');
+    final toOneColumns = table.columns.where((c) => c.features.any((f) => f is ToOne));
+
+    for (final column in toOneColumns) {
+      buffer.write('await instances.map((instance) => instance.${column.dartGetterName}).where((element) => element != null).toList().saveAll();\n');
+    }
+
+    buffer.write('await batch((b) => b.insertAll(${table.tableFieldName}, instances, mode: InsertMode.insertOrReplace));\n');
+
     buffer.write('}\n');
   }
 
