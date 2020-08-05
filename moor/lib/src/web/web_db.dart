@@ -134,9 +134,16 @@ class _WebDelegate extends DatabaseDelegate {
     if (!isInTransaction) {
       final data = _db.export();
       final binStr = bin2str.encode(data);
-      window.localStorage[_persistenceKey] = binStr;
+      try {
+        window.localStorage[_persistenceKey] = binStr;
+      } catch(e) {
+        window.localStorage[_persistenceKey] = '';
+        window.localStorage[_versionKey] = '';
+      }
     }
   }
+
+  String get _versionKey => 'moor_db_version_$name';
 }
 
 class _WebVersionDelegate extends DynamicVersionDelegate {
