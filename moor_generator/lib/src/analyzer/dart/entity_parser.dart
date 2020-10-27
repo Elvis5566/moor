@@ -1,7 +1,7 @@
 import 'package:analyzer/dart/constant/value.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
-import 'package:analyzer/src/dart/resolver/inheritance_manager.dart' show InheritanceManager;
+import 'package:analyzer/src/dart/element/inheritance_manager3.dart' show InheritanceManager3;
 import 'package:moor/moor.dart';
 import 'package:moor/sqlite_keywords.dart';
 import 'package:moor_generator/src/analyzer/dart/parser.dart';
@@ -62,11 +62,11 @@ class EntityParser {
 
   Future<List<SpecifiedColumn>> _parseColumns(ClassElement element) async {
     // ignore: deprecated_member_use
-    final manager = InheritanceManager(element.library);
+    final manager = InheritanceManager3();
 
     final superFields = manager
     // ignore: deprecated_member_use
-        .getMembersInheritedFromClasses(element)
+        .getInheritedConcreteMap2(element)
         .values
         .where((e) => e is PropertyAccessorElement)
         .map((e) => (e as PropertyAccessorElement).variable)
