@@ -114,6 +114,7 @@ class EntityParser {
     final isNullable = obj.getField('isNullable').toBoolValue();
     final autoIncrement = obj.getField('auto').toBoolValue();
     final converterType = obj.getField('converter')?.toTypeValue();
+    final defaultArgument = obj.getField('defaultValue')?.toStringValue();
 
     UsedTypeConverter typeConverter;
 
@@ -180,6 +181,7 @@ class EntityParser {
       features: foundFeatures,
 //        defaultArgument: foundDefaultExpression?.toSource(),
       typeConverter: typeConverter,
+      defaultArgument: defaultArgument,
     );
   }
 

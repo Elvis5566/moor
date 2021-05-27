@@ -31,7 +31,9 @@ class EntityColumn implements EntityColumnBase {
 
   final Type converter;
 
-  const EntityColumn({this.name, this.isNullable = false, this.uniqueGroup, this.auto = false, this.length, this.converter});
+  final String defaultValue;
+
+  const EntityColumn({this.name, this.isNullable = false, this.uniqueGroup, this.auto = false, this.length, this.converter, this.defaultValue});
 }
 
 /// Annotation to declare a model property as primary key in database table
