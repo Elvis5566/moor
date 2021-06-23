@@ -21,3 +21,5 @@ export 'package:moor/src/runtime/exceptions.dart';
 export 'package:moor/src/utils/expand_variables.dart';
 export 'package:moor/src/utils/hash.dart';
 export 'package:moor/src/utils/lazy_database.dart';
+export 'package:moor/src/orm/annotation.dart';
+export 'package:moor/src/orm/orm.dart';
