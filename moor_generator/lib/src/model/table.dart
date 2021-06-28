@@ -128,12 +128,15 @@ class MoorTable extends MoorEntityWithResultSet {
     return (declaration as TableDeclarationWithSql).createSql;
   }
 
+  final bool fromEntity;
+
   MoorTable({
     this.fromClass,
     this.columns = const [],
     this.sqlName,
     this.dartTypeName,
     this.primaryKey,
+    this.fromEntity,
     String overriddenName,
     this.overrideWithoutRowId,
     this.overrideTableConstraints,
