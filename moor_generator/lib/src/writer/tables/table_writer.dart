@@ -1,4 +1,5 @@
 //@dart=2.9
+import 'package:analyzer/dart/element/element.dart';
 import 'package:moor/sqlite_keywords.dart';
 import 'package:moor_generator/moor_generator.dart';
 import 'package:moor_generator/src/model/declarations/declaration.dart';
@@ -180,7 +181,7 @@ abstract class TableOrViewWriter {
       // Use default .fromData constructor in the moor-generated data class
       final hasDbParameter = tableOrView is MoorTable;
       if (hasDbParameter) {
-        buffer.write('return $dataClassName.fromData(data, _db, '
+        buffer.write('return fromData(data, _db, '
             "prefix: tablePrefix != null ? '\$tablePrefix.' : null);\n");
       } else {
         buffer.write('return $dataClassName.fromData(data, '
@@ -228,7 +229,7 @@ class TableWriter extends TableOrViewWriter {
   void writeDataClass() {
     if (!table.hasExistingRowClass &&
         scope.generationOptions.writeDataClasses) {
-      DataClassWriter(table, scope.child()).write();
+      DataClassWriter(table, scope.child()).writeToColumns();
     }
 
     if (scope.generationOptions.writeCompanions) {
@@ -290,6 +291,11 @@ class TableWriter extends TableOrViewWriter {
     writeMappingMethod(scope);
     // _writeReverseMappingMethod();
 
+    if (table.fromEntity) {
+      _writeFromDataMethod();
+      _writeBuildJoinInfo();
+    }
+
     _writeAliasGenerator();
 
     _writeConvertersAsStaticFields();
@@ -302,7 +308,7 @@ class TableWriter extends TableOrViewWriter {
   void _writeConvertersAsStaticFields() {
     for (final converter in table.converters) {
       final typeName = converter.converterNameInCode(scope.generationOptions);
-      final code = converter.expression;
+      final code = 'const $typeName()';
       buffer.write('static $typeName ${converter.fieldName} = $code;');
     }
   }
@@ -433,4 +439,90 @@ class TableWriter extends TableOrViewWriter {
         ..write('String get moduleAndArgs => $moduleAndArgs;\n');
     }
   }
+
+  void _writeBuildJoinInfo() {
+    buffer.write('@override\n');
+    buffer.write('Map<GeneratedColumn, TableInfo> buildJoinInfo() {\n');
+    buffer.write('return {\n');
+    buffer.write(table.columns.where((c) => c.isToOne()).map((c) {
+      final name = c.fieldName;
+      return "${c.dartGetterName}: ${c.getToOne().referencedTable.entityInfoName}(_db, '\${\$tableName}_$name'),";
+    }).join());
+
+    buffer.write('};\n');
+    buffer.write('}\n');
+  }
+
+  void _writeFromDataMethod() {
+    final dataClassName = table.dartTypeName;
+
+    buffer
+      ..write('$dataClassName fromData')
+      ..write('(Map<String, dynamic> data, GeneratedDatabase db, ')
+      ..write('{String? prefix}) {\n')
+      ..write('final joinInfo = buildJoinInfo();\n')
+      ..write("final effectivePrefix = prefix ?? '';");
+
+    final usedCtorParamsAndFields = <String>{};
+    final constructorArguments = <ParameterElement>[];
+    final namedConstructorArguments = <ParameterElement>[];
+    final constructorParameters = table.entityClass.unnamedConstructor?.parameters ?? [];
+
+    for (final arg in constructorParameters) {
+      if (arg.isNamed) {
+        namedConstructorArguments.add(arg);
+      } else {
+        constructorArguments.add(arg);
+      }
+      usedCtorParamsAndFields.add(arg.name);
+    }
+
+    final fieldValues = Map.fromEntries(table.columns.map((column){
+      final getter = column.dartGetterName;
+      final columnName = "'\${effectivePrefix}${column.name.name}'";
+      final sqlType = 'const ${sqlTypes[column.type]}()';
+      var loadType = '$sqlType.mapFromDatabaseResponse(data[$columnName])';
+
+      // run the loaded expression though the custom converter for the final
+      // result.
+      if (column.typeConverter != null) {
+        // stored as a static field
+        final converter = column.typeConverter;
+        final loaded = '${table.entityInfoName}.${converter.fieldName}';
+        loadType = '$loaded.mapToDart($loadType)';
+      } else if (column.isToOne()) {
+        loadType =
+        'joinInfo[$getter]!.map(data, tablePrefix: joinInfo[$getter]!.\$tableName)';
+      }
+
+      if (!column.nullable) {
+        loadType = '$loadType!';
+      }
+
+      return MapEntry(column.fieldName, loadType);
+    }));
+
+    final _constructorArguments = constructorArguments.map((field) {
+      return fieldValues[field.name];
+    }).toList();
+
+    final _namedConstructorArguments = namedConstructorArguments.map((field) {
+      return '${field.name}: ${fieldValues[field.name]}';
+    }).toList();
+
+    final allConstructorArguments = [
+      ..._constructorArguments,
+      ..._namedConstructorArguments,
+    ].join(', ');
+
+    // finally, the mighty constructor invocation:
+    buffer.write('$dataClassName model = $dataClassName($allConstructorArguments);\n');
+
+    table.columns.map((e) => e.fieldName).toSet().difference(usedCtorParamsAndFields).forEach((fieldName){
+      buffer.write('model.$fieldName = ${fieldValues[fieldName]};');
+    });
+
+    buffer.write('return model;\n}\n');
+  }
+
 }

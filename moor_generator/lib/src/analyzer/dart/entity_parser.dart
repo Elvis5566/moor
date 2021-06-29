@@ -1,6 +1,7 @@
 //@dart=2.9
 import 'package:analyzer/dart/constant/value.dart';
 import 'package:analyzer/dart/element/element.dart';
+import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/src/dart/element/inheritance_manager3.dart'
     show InheritanceManager3;
@@ -9,6 +10,7 @@ import 'package:moor/sqlite_keywords.dart';
 import 'package:moor_generator/src/analyzer/dart/parser.dart';
 import 'package:moor_generator/src/analyzer/errors.dart';
 import 'package:moor_generator/src/model/column.dart';
+import 'package:moor_generator/src/model/declarations/declaration.dart';
 import 'package:moor_generator/src/model/table.dart';
 import 'package:moor_generator/src/model/used_type_converter.dart';
 import 'package:moor_generator/src/utils/names.dart';
@@ -36,13 +38,14 @@ class EntityParser {
         columns.where((c) => c.features.contains(const PrimaryKey())).toSet();
 
     final table = MoorTable(
+      entityClass: element,
       fromClass: null,
       columns: columns,
       sqlName: escapeIfNeeded(tableName),
       dartTypeName: dataClassNameForClassName(dartTableName),
       overriddenName: ReCase(tableName).pascalCase,
-      fromEntity: true,
       primaryKey: primaryKey,
+      declaration: DartTableDeclaration(element, base.step.file),
 //      overrideWithoutRowId: table.withoutRowId ? true : null,
 //      overrideTableConstraints: constraints.isNotEmpty ? constraints : null,
       // we take care of writing the primary key ourselves
@@ -117,10 +120,9 @@ class EntityParser {
     return columns.first;
   }
 
-  Future<MoorColumn> _makeMoorColumn(
-      FieldElement f, DartObject obj) async {
+  Future<MoorColumn> _makeMoorColumn(FieldElement f, DartObject obj) async {
     final columnName = obj.getField('name').toStringValue();
-    final isNullable = obj.getField('isNullable').toBoolValue();
+    // final isNullable = obj.getField('isNullable').toBoolValue();
     final autoIncrement = obj.getField('auto').toBoolValue();
     final converterType = obj.getField('converter')?.toTypeValue();
     final defaultArgument = obj.getField('defaultValue')?.toStringValue();
@@ -147,12 +149,15 @@ class EntityParser {
 
     MoorColumn referencedColumn;
 
+    var suffix = '';
+
     if (isPrimaryKey.isExactlyType(obj.type)) {
       foundFeatures.add(const PrimaryKey());
     } else if (isToOne.isExactlyType(obj.type)) {
       final referencedTable = await base.step.parseEntity(f.type);
       referencedColumn = referencedTable.primaryKey.first;
-      foundFeatures.add(ToOne(referencedTable, referencedColumn));
+      foundFeatures.add(ToOne(referencedTable, referencedColumn, f.name));
+      suffix = 'Id';
     }
 
     if (autoIncrement) {
@@ -171,15 +176,18 @@ class EntityParser {
       type = _typeToColumnType(f.type);
     }
 
+    final dartGetterName = f.name + suffix;
+
     return MoorColumn(
       type: type,
-      dartGetterName: f.name,
+      dartGetterName: dartGetterName,
       name: columnName != null
           ? ColumnName.explicitly(columnName)
-          : ColumnName.implicitly(ReCase(f.name).snakeCase),
+          : ColumnName.implicitly(ReCase(dartGetterName).snakeCase),
 //        overriddenJsonName: _readJsonKey(getterElement),
 //        customConstraints: foundCustomConstraint,
-      nullable: isNullable,
+//       nullable: isNullable,
+      nullable: f.type.nullabilitySuffix == NullabilitySuffix.question,
       features: foundFeatures,
 //        defaultArgument: foundDefaultExpression?.toSource(),
       typeConverter: typeConverter,

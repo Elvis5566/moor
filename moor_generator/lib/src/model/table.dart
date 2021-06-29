@@ -17,6 +17,8 @@ class MoorTable extends MoorEntityWithResultSet {
   /// the table was inferred from a `CREATE TABLE` statement.
   final ClassElement fromClass;
 
+  final ClassElement entityClass;
+
   @override
   final TableDeclaration declaration;
 
@@ -128,7 +130,7 @@ class MoorTable extends MoorEntityWithResultSet {
     return (declaration as TableDeclarationWithSql).createSql;
   }
 
-  final bool fromEntity;
+  bool get fromEntity => entityClass != null;
 
   MoorTable({
     this.fromClass,
@@ -136,13 +138,13 @@ class MoorTable extends MoorEntityWithResultSet {
     this.sqlName,
     this.dartTypeName,
     this.primaryKey,
-    this.fromEntity,
     String overriddenName,
     this.overrideWithoutRowId,
     this.overrideTableConstraints,
     this.overrideDontWriteConstraints,
     this.declaration,
     this.existingRowClass,
+    this.entityClass,
   }) : _overriddenName = overriddenName {
     _attachToConverters();
   }

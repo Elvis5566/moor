@@ -200,10 +200,14 @@ class DataClassWriter {
     _buffer.write(');');
   }
 
+  void writeToColumns() {
+    _writeToColumnsOverride();
+  }
+
   void _writeToColumnsOverride() {
     _buffer
-      ..write('@override\nMap<String, Expression> toColumns'
-          '(bool nullToAbsent) {\n')
+      ..write('\nMap<String, Expression> _\$toColumns'
+          '(${table.dartTypeName} instance, bool nullToAbsent) {\n')
       ..write('final map = <String, Expression> {};');
 
     for (final column in table.columns) {
@@ -213,7 +217,7 @@ class DataClassWriter {
       final needsNullCheck = column.nullable || !scope.generationOptions.nnbd;
       final needsScope = needsNullCheck || column.typeConverter != null;
       if (needsNullCheck) {
-        _buffer.write('if (!nullToAbsent || ${column.dartGetterName} != null)');
+        _buffer.write('if (!nullToAbsent || instance.${column.dataClassValueGetterName} != null)');
       }
       if (needsScope) _buffer.write('{');
 
@@ -230,7 +234,7 @@ class DataClassWriter {
         _buffer
           ..write('final converter = $fieldName;\n')
           ..write(mapSetter)
-          ..write('(converter.mapToSql(${column.dartGetterName})');
+          ..write('(converter.mapToSql(instance.${column.dartGetterName})');
         if (assertNotNull) _buffer.write('!');
         _buffer.write(');');
       } else {
@@ -238,7 +242,7 @@ class DataClassWriter {
         _buffer
           ..write(mapSetter)
           ..write('(')
-          ..write(column.dartGetterName)
+          ..write('instance.${column.dataClassValueGetterName}')
           ..write(');');
       }
 

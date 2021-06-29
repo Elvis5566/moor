@@ -123,6 +123,9 @@ class DatabaseWriter {
     }
 
     // Write List of tables
+    final daoGetters = db.daos.map((d) => ReCase(d.getDisplayString(withNullability: false)).camelCase);
+    final tables = daoGetters.map((d) => '...$d.tables');
+
     final schemaScope = dbScope.leaf();
     schemaScope
       ..write('@override\nIterable<TableInfo> get allTables => ')
@@ -131,14 +134,7 @@ class DatabaseWriter {
       ..write('=> [');
 
     schemaScope
-      ..write(db.entities.map((e) {
-        if (e is SpecialQuery) {
-          final sql = e.formattedSql(scope.options);
-          return 'OnCreateQuery(${asDartLiteral(sql)})';
-        }
-
-        return entityGetters[e];
-      }).join(', '))
+      ..write('${tables.join(',')}')
       // close list literal and allSchemaEntities getter
       ..write('];\n');
 

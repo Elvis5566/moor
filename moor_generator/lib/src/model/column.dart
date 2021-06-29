@@ -21,6 +21,7 @@ class ColumnName {
   final String name;
 
   ColumnName.implicitly(this.name) : implicit = true;
+
   ColumnName.explicitly(this.name) : implicit = false;
 
   @override
@@ -64,6 +65,7 @@ class MoorColumn implements HasDeclaration, HasType {
 
   /// An (optional) name to use as a json key instead of the [dartGetterName].
   final String overriddenJsonName;
+
   String getJsonKey([MoorOptions options = const MoorOptions.defaults()]) {
     if (overriddenJsonName != null) return overriddenJsonName;
 
@@ -168,9 +170,30 @@ class MoorColumn implements HasDeclaration, HasType {
 
   bool isToOne() => features.any((f) => f is ToOne);
 
-  ToOne getToOne() => features.firstWhere((f) => f is ToOne) as ToOne;
+  ToOne getToOne() {
+    try {
+      return features.firstWhere((f) => f is ToOne) as ToOne;
+    } catch (_) {
+      return null;
+    }
+  }
 
-  String get suffix => isToOne() ? getToOne().columnSuffix : '';
+  String get nullSign => nullable ? '?' : '';
+
+  /// Field name that declared in DataClass.
+  /// dartGetterName is changed as getter name of column fields,
+  /// which will be {field name} + {referencedColumnName} if it 's toOne column.
+  String get fieldName => isToOne() ? getToOne().fieldName : dartGetterName;
+
+  String get dataClassValueGetterName => () {
+        final toOne = getToOne();
+        if (toOne == null) {
+          return dartGetterName;
+        } else {
+          final pKey = toOne.referencedColumn.dartGetterName;
+          return '${toOne.fieldName}$nullSign.$pKey';
+        }
+      }();
 
   MoorColumn({
     this.type,
@@ -235,6 +258,7 @@ class ToOne extends ColumnFeature {
   final MoorTable referencedTable;
   final MoorColumn referencedColumn;
   final String columnSuffix = 'Id';
+  final String fieldName;
 
-  const ToOne(this.referencedTable, this.referencedColumn);
+  const ToOne(this.referencedTable, this.referencedColumn, this.fieldName);
 }

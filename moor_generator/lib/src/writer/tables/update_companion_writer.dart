@@ -208,4 +208,5 @@ class UpdateCompanionWriter {
       _buffer,
     );
   }
+
 }
