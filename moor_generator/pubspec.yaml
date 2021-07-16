@@ -23,7 +23,10 @@ dependencies:
   cli_util: '>=0.2.0 <0.4.0'
 
   # Moor-specific analysis and apis
-  moor: ^4.4.0
+  moor:
+    git:
+      url: https://github.com/Elvis5566/moor
+      path: moor
   sqlite3: '>=0.1.6 <2.0.0'
   sqlparser: ^0.17.0
 
